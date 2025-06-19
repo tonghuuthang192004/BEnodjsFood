@@ -1,0 +1,75 @@
+.header {
+    border-bottom: 1px solid #ddd;
+    padding: 10px 0;
+}
+
+.header .inner-logo img {
+    max-width: 50px;
+    max-height: 100%;
+}
+
+.inner-menu ul.list_menu {
+    display: flex;
+    padding: 0; /* Đảm bảo không có padding ngoài ý muốn */
+    margin: 0;  /* Xóa margin nếu có */
+}
+
+.inner-menu ul.list_menu li {
+    margin-right: 20px; /* Điều chỉnh khoảng cách giữa các item */
+    list-style-type: none;
+}
+
+.inner-menu ul.list_menu li a {
+    text-decoration: none; /* Xóa gạch chân nếu có */
+    color: #333; /* Đặt màu cho các liên kết */
+}
+.product-item {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #fff;
+    transition: box-shadow 0.3s ease;
+    padding: 10px;
+}
+
+.product-item:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.product-item .inner-image img {
+    width: 100%;
+    height: auto;
+    border-radius: 6px;
+    object-fit: cover;
+}
+
+.product-item .inner-content {
+    padding: 10px 0;
+    text-align: center;
+}
+
+.product-item .inner-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 5px 0;
+    color: #333;
+}
+
+.product-item .inner-price-new {
+    color: #e53935;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.product-item .inner-price-old {
+    color: #999;
+    text-decoration: line-through;
+    margin-left: 8px;
+    font-size: 1rem;
+}
+
+.product-item .inner-discount {
+    color: #388e3c;
+    font-weight: 500;
+    margin-top: 4px;
+}

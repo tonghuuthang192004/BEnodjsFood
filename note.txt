@@ -1,0 +1,32 @@
+B1 :Khởi tạo npm init ->tao project
+    Npm i express ->tạo express 
+    Nodemon 
+    tạo index.js
+
+    tạo pug , cấu hình pug 
+    tạo views->và tạo client và admin
+    client->pages
+    pages->home chứa trang chủ ...
+    trong folder home tạo index.pug trang chủ 
+    tạo fodler router ->admin và client->index.route.js ->file này chính 
+    tạo function route để linh qua trang chính 
+    tách nhỏ file route ra nữa ví dụ product
+    tao folder controller admin và client
+    tạo file chính home.controller.js
+    .env nơi chứa hằng số cấu hình và nhúng vào , và lên thư viện cài npm .ENV npm i dotenv
+    views ->client->tạo layout ->default.pug cái này nó chung giao diện 
+    tạo folder patirals trong thư mục views để cắt nhỏ các thành phần như header footer xong nhúng nó lại vào file default.pug trong thư mục layout
+    chỉnh title vào controller data động
+    nhúng file tỉnh
+    tạo folder public js css images
+    css cho header và footer 
+    tạo folder mixins trong view để cấu hình mấy cái gì ở chung nó 
+    tải npm install mysql2
+    connect
+    tạo folder config
+    database 
+    tạo folder modal 
+    tạo file productModal.js
+    requrice database vào model
+
+    admin vao folder controller tạo file dashborad 
