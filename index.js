@@ -11,7 +11,9 @@ app.use(cors({
 }));
 
 
-
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+// upload 
 const database = require('./config/database');
 app.use(bodyParser.json());  // Để có thể parse body JSON
 

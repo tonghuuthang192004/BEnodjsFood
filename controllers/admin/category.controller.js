@@ -1,4 +1,3 @@
-const categoryController = require('../../controllers/admin/category.controller');
 const category =require('../../modal/categoryMedal')
 module.exports.index = async(req, res) =>{
  try {

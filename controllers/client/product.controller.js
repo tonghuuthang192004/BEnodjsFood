@@ -6,7 +6,11 @@ const Product = require('../../modal/client/productModal');
 
 module.exports.index = async(req, res) =>{
 
-const data= await Product.getAllProducts();
+
+const fliters ={
+    search:req.query.search || undefined
+}
+const data= await Product.getAllProducts(fliters);
 res.json(data);
 
 

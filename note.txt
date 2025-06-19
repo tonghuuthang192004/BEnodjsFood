@@ -30,3 +30,7 @@ B1 :Khởi tạo npm init ->tao project
     requrice database vào model
 
     admin vao folder controller tạo file dashborad 
+
+
+    làm chức năng upload ảnh 
+    cài thêm multer

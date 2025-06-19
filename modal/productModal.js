@@ -10,7 +10,7 @@ const getAllProducts = async (filters = {}) => {
   if (filters.deleted !== undefined) {
     sql += ' AND deleted = ?';
     params.push(filters.deleted);
-  }
+  }xx
 
   if (filters.status !== undefined) {
     sql += ' AND trang_thai = ?';
@@ -79,34 +79,29 @@ const deleteAll = async (ids) => {
 }
 
 
-const createProduct =  async (product)=>{
-
-  const query=`INSERT INTO san_pham(id_san_pham,id_danh_muc,ten,gia,mo_ta,trang_thai,ngay_cap_nhat,ngay_tao,hinh_anh,deleted) VALUES(?,?,?,?,?,?,?,?,?,?)`;
-  const values =[
-    product.id_san_pham,
-    product.id_danh_muc,
-    product.ten,
-    product.gia,
-    product.mo_ta,
-    product.trang_thai,
-    product.ngay_cap_nhat,
-    product.ngay_tao,
-    product.hinh_anh,
-    product.deleted
-
-
-  ];
-  const res=await db.query(query,values);
-  return res;
-
-
-
-}
-const getCategoryIdByName = async (ten_danh_muc) => {
-  const [rows] = await db.query('SELECT id_danh_muc FROM danh_muc WHERE ten = ?', [ten_danh_muc]);
-  if (!rows.length) throw new Error(`Danh mục không tồn tại: ${ten_danh_muc}`);
-  return rows[0].id_danh_muc;
+const createProduct = async (product) => {
+  try {
+    const query = `INSERT INTO san_pham(id_san_pham,id_danh_muc,ten,gia,mo_ta,trang_thai,ngay_cap_nhat,ngay_tao,hinh_anh,deleted) VALUES(?,?,?,?,?,?,?,?,?,?)`;
+    const values = [
+      product.id_san_pham,
+      product.id_danh_muc,
+      product.ten,
+      product.gia,
+      product.mo_ta,
+      product.trang_thai,
+      product.ngay_cap_nhat,
+      product.ngay_tao,
+      product.hinh_anh,
+      product.deleted
+    ];
+    const res = await db.query(query, values);
+    return res;
+  } catch (err) {
+    console.error("Lỗi khi thêm sản phẩm:", err.message);
+    throw err;
+  }
 };
+
 
 const updateProduct = async (product) => {
   const {
