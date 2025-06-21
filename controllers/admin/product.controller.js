@@ -92,25 +92,31 @@ module.exports.deleteMultiple =async(req,res)=>{
 
   }
 }
+module.exports.createProductItem = async (req, res) => {
+  try {
+   
+    // ==== TẠO SẢN PHẨM ====
+    const Product = {
+      ...req.body,
+      hinh_anh: req.file ? req.file.filename : null, // ✅ Sửa tại đây
+    };
 
-module.exports.createProductItem = async(req,res)=>{
-  
+    const result = await product.createProduct(Product);
+    console.log("✅ Thêm sản phẩm thành công", result);
 
-  try{
-    const {filename}=req.file
-    const Product={...req.body,hinh_anh:filename};
-    const result=await product.createProduct(Product)
-    console.log("Thêm sản phẩm thành công",{result});
-    res.status(201).json({ message: 'Thêm sản phẩm thành công', data: result });
+    return res.status(201).json({
+      message: 'Thêm sản phẩm thành công',
+      data: result
+    });
+  } catch (error) {
+    console.error("❌ Lỗi khi thêm sản phẩm:", error);
+    return res.status(500).json({
+      message: 'Lỗi server khi thêm sản phẩm',
+      error: error.message,
+    });
   }
-  catch(error)
-  {
-    console.error("lỗi khi thêm sản phẩm")
-    res.status(500).json({ message: 'Lỗi server khi thêm sản phẩm', error: error.message });
+};
 
-  }
-  console.log(req.file);
-}
 
 module.exports.editProduct = async (req, res) => {
   try {

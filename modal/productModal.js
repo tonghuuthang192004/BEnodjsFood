@@ -1,8 +1,6 @@
 const db = require('../config/database');
 
 
-
-
 const getAllProducts = async (filters = {}) => {
   let sql = `SELECT * FROM san_pham Where deleted=0 `; // dễ xử lý điều kiện động
   const params = [];
@@ -10,7 +8,7 @@ const getAllProducts = async (filters = {}) => {
   if (filters.deleted !== undefined) {
     sql += ' AND deleted = ?';
     params.push(filters.deleted);
-  }xx
+  }
 
   if (filters.status !== undefined) {
     sql += ' AND trang_thai = ?';
