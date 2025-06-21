@@ -120,9 +120,10 @@ module.exports.createProductItem = async (req, res) => {
 
 module.exports.editProduct = async (req, res) => {
   try {
-    console.log('Dữ liệu nhận để sửa:', req.body); // Log dữ liệu nhận vào
+    console.log('Dữ liệu nhận để sửa:', req.body);
     const Product = req.body;
-    const result = await product.updateProduct(Product);
+    const id_san_pham = req.params.id_san_pham;
+    const result = await product.updateProduct(Product, id_san_pham);
     console.log("Sửa sản phẩm thành công", { result });
     res.status(201).json({ message: 'Sửa sản phẩm thành công', data: result });
   } catch (error) {

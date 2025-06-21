@@ -100,11 +100,9 @@ const createProduct = async (product) => {
   }
 };
 
-
-const updateProduct = async (product) => {
+const updateProduct = async (product, id_san_pham) => {
   const {
-    ten_danh_muc, // tên danh mục từ client, bắt buộc phải có
-    id_san_pham,
+    id_danh_muc,
     ten,
     gia,
     mo_ta,
@@ -112,10 +110,8 @@ const updateProduct = async (product) => {
     hinh_anh
   } = product;
 
-  if (!ten_danh_muc) throw new Error('Thiếu tên danh mục (ten_danh_muc)');
 
-  const id_danh_muc = await getCategoryIdByName(ten_danh_muc); // lấy id danh mục từ tên
-  const ngay_cap_nhat = new Date().toISOString().split('T')[0]; // định dạng yyyy-mm-dd
+  const ngay_cap_nhat = new Date().toISOString().split('T')[0];
 
   const query = `
     UPDATE san_pham 
@@ -142,7 +138,6 @@ module.exports = {
   createProduct,
   updateProduct
 
-  
   //   updateProduct,
   //   deleteProduct
 };

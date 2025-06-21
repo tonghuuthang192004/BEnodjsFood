@@ -25,7 +25,7 @@ router.post('/create-product',
     upload.single('hinh_anh'),
     validate.creatPost
     ,controllerProduct.createProductItem)
-router.post('/eidt-product',controllerProduct.editProduct)
+router.post('/edit-product/:id_san_pham', controllerProduct.editProduct);
 
 // này / file chinh của product
 
