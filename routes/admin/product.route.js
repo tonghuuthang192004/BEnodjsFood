@@ -24,9 +24,19 @@ router.post('/create-product',
     
     upload.single('hinh_anh'),
     validate.creatPost
-    ,controllerProduct.createProductItem)
-router.post('/edit-product/:id_san_pham', controllerProduct.editProduct);
+    ,controllerProduct.createProductItem);
 
+
+
+router.get('/edit-product/:id_san_pham', controllerProduct.getEditProduct); // chỉ lấy data
+
+router.post(
+  '/edit-product/:id_san_pham',
+  upload.single('hinh_anh'),          // phải đứng trước
+  validate.editProduct,               // sau đó mới validate
+  controllerProduct.editProduct       // cuối cùng là xử lý logic
+);
+router.get('/productDetail/:id_san_pham',controllerProduct.productDetail);
 // này / file chinh của product
 
 module.exports = router;    

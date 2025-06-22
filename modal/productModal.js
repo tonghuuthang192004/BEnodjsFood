@@ -125,6 +125,14 @@ const updateProduct = async (product, id_san_pham) => {
 };
 
 
+const getAllProductsId= async (id)=>{
+      const query="SELECT * FROM san_pham where id_san_pham = ?";
+      const [rel]=await db.query(query,[id])
+      return rel[0];
+      
+  }
+
+
 
 // thêm mới sản phẩm 
 
@@ -136,7 +144,8 @@ module.exports = {
   deleteItem,
   deleteAll,
   createProduct,
-  updateProduct
+  updateProduct,
+  getAllProductsId
 
   //   updateProduct,
   //   deleteProduct

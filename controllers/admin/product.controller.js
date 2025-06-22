@@ -118,16 +118,93 @@ module.exports.createProductItem = async (req, res) => {
 };
 
 
+
+module.exports.getEditProduct = async (req, res) => {
+  const { id_san_pham } = req.params;
+  try {
+    console.log("Fetching product with ID:", id_san_pham); // Log ID sản phẩm nhận được từ URL
+    const result = await product.getAllProductsId(id_san_pham);
+
+    if (!result) {
+      return res.status(404).json({ message: 'Sản phẩm không tồn tại' });
+    }
+
+    console.log("Product data:", result);  // Log dữ liệu sản phẩm
+
+    res.json(result); // Trả về dữ liệu sản phẩm
+  } catch (error) {
+    console.error("Server error:", error);  // Log lỗi từ server
+    res.status(500).json({ message: 'Lỗi server', error: error.message });
+  }
+};
+
 module.exports.editProduct = async (req, res) => {
   try {
-    console.log('Dữ liệu nhận để sửa:', req.body);
-    const Product = req.body;
+    console.log('Body:', req.body);
+    console.log('File:', req.file);
     const id_san_pham = req.params.id_san_pham;
-    const result = await product.updateProduct(Product, id_san_pham);
-    console.log("Sửa sản phẩm thành công", { result });
-    res.status(201).json({ message: 'Sửa sản phẩm thành công', data: result });
+    const file = req.file;
+    const {
+      ten,
+      id_danh_muc,
+      gia,
+      mo_ta,
+      trang_thai,
+    } = req.body;
+
+    // Lấy sản phẩm hiện tại từ DB (để lấy ảnh cũ)
+    const existingProduct = await product.getAllProductsId(id_san_pham);
+
+    if (!existingProduct) {
+      return res.status(404).json({ message: 'Sản phẩm không tồn tại' });
+    }
+
+    // Nếu có file mới thì lấy tên file mới, còn không thì lấy ảnh cũ từ DB
+    const hinh_anh = file ? file.filename : existingProduct.hinh_anh;
+
+    // Kiểm tra ảnh (bắt buộc phải có ảnh, ảnh cũ hoặc mới)
+    if (!hinh_anh) {
+      return res.status(400).json({ message: 'Ảnh sản phẩm là bắt buộc' });
+    }
+
+    // Tạo object update
+    const productUpdate = {
+      ten,
+      id_danh_muc,
+      gia,
+      mo_ta,
+      trang_thai,
+      hinh_anh,
+    };
+
+    // Cập nhật sản phẩm
+    const result = await product.updateProduct(productUpdate, id_san_pham);
+
+    res.status(200).json({ message: 'Sửa sản phẩm thành công', data: result });
   } catch (error) {
-    console.error("Lỗi khi sửa sản phẩm:", error.message);
+    console.error('Lỗi khi sửa sản phẩm:', error);
     res.status(500).json({ message: 'Lỗi server khi sửa sản phẩm', error: error.message });
+  }
+};
+
+
+module.exports.productDetail = async (req, res) => {
+  try {
+    const { id_san_pham } = req.params;
+
+    if (!id_san_pham) {
+      return res.status(400).json({ error: 'Product ID is required.' });
+    }
+
+    const data = await product.getAllProductsId(id_san_pham);
+
+    if (!data) {
+      return res.status(404).json({ error: 'Product not found.' });
+    }
+
+    res.json({ success: true, product: data });
+  } catch (error) {
+    console.error('Error fetching product by ID:', error);
+    res.status(500).json({ error: 'Internal server error.' });
   }
 };

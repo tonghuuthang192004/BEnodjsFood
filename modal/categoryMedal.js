@@ -7,6 +7,7 @@ const categoryAll = async ()=>{
     return res;
 
 }
+
 module.exports={
     categoryAll
 }
