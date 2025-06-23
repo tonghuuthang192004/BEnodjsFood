@@ -1,0 +1,21 @@
+const auth = require('../../modal/auth.Medal'); // <-- đường dẫn đúng tới model
+
+module.exports.LoginPost = async (req, res) => {
+  const { email, mat_khau } = req.body;
+
+  try {
+    const user = await auth.login(email, mat_khau);
+
+    if (user) {
+      const { mat_khau, ...userInfo } = user; // Ẩn mật khẩu khi trả về
+      res.json(userInfo);
+      res.cookie("token",user.token);
+    } else {
+      res.status(401).json({ message: "Invalid email or password" });
+    }
+  } catch (error) {
+    console.error("Error during login:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+  
+};

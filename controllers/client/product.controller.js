@@ -1,7 +1,7 @@
 const Product = require('../../modal/client/productModal');
 
 
- console.log(Product);
+//  console.log(Product);
 
 
 module.exports.index = async(req, res) =>{

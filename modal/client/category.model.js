@@ -16,6 +16,22 @@ const getCategoryId = async (id_danh_muc) => {
     }
 };
 
+const getAllCategory = async () => {
+    try {
+        const sql = `
+           SELECT *FROM danh_muc
+        `;
+        const [rel] = await db.query(sql);
+        return rel;
+    } catch (error) {
+        console.error('Lỗi khi lấy danh mục:', error);
+        throw error; // ❗ KHÔNG dùng res ở đây vì model không có res
+    }
+};
+
+
+
 module.exports = {
-    getCategoryId
+    getCategoryId,
+    getAllCategory
 };

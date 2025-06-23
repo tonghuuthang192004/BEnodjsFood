@@ -1,5 +1,5 @@
 const cartModel = require('../../modal/client/cart.model');
-console.log(cartModel)
+// console.log(cartModel)
 
 const userId=1;
 module.exports.getUserCart= async (req,res)=>{
