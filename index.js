@@ -1,5 +1,7 @@
 const express = require('express');
 require('dotenv').config();
+const cookieParser = require('cookie-parser');  // Import cookie-parser
+
 const cors = require('cors');
 const bodyParser = require('body-parser');
 
@@ -7,8 +9,11 @@ const app = express();  // tạo app express trước
 
 app.use(cors({
   origin: 'http://localhost:3001',  // cho phép React frontend truy cập
-  credentials: true,                 // nếu có dùng cookie hoặc auth
+  credentials: true,      
+             // nếu có dùng cookie hoặc auth
 }));
+
+app.use(cookieParser()); // Dùng cookie-parser để xử lý cookies
 
 
 app.use(bodyParser.json({ limit: '10mb' }));

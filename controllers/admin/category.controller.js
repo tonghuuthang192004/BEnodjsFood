@@ -135,13 +135,21 @@ module.exports.changeMulti = async (req, res) => {
   try {
     const { ids, newStatus } = req.body;
 
+    // Kiểm tra lại dữ liệu đầu vào
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ message: 'Danh sách ID không hợp lệ' });
     }
+    if (!['active', 'inactive'].includes(newStatus)) {
+      return res.status(400).json({ message: 'Trạng thái không hợp lệ' });
+    }
 
+    // Gọi hàm cập nhật trạng thái
     const result = await category.updateCategoryStatusMulti(ids, newStatus);
+
+    // Trả kết quả về cho client
     res.json({ message: 'Cập nhật trạng thái nhiều danh mục thành công', result });
   } catch (error) {
+    console.error('Error during bulk status update:', error);  // Log thêm chi tiết lỗi
     res.status(500).json({ message: 'Lỗi khi cập nhật trạng thái nhiều danh mục', error: error.message });
   }
 };

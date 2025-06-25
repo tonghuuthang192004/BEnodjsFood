@@ -1,54 +1,44 @@
+// modal/client/cart.model.js
+
 const db = require('../../config/database');
 
+const getCartUserID = async (userId) => {
+  const [result] = await db.query('SELECT * FROM gio_hang WHERE id_nguoi_dung = ? ORDER BY ngay_tao DESC LIMIT 1', [userId]);
+  return result.length > 0 ? result[0] : null;
+};
 
+const createCart = async (userId) => {
+  const sql = 'INSERT INTO gio_hang (id_nguoi_dung, ngay_tao) VALUES (?, NOW())';
+  const [result] = await db.query(sql, [userId]);
+  return result;
+};
 
-const getCartUserID= async (userId)=>{
-const [rel]= await db.query (`SELECT * FROM gio_hang 
-    WHERE id_nguoi_dung=? ORDER BY ngay_tao DESC LIMIT 1`,[userId]);
-  return rel.length > 0 ? rel[0] : null;
-}
+const getCartItem = async (cartId) => {
+  const sql = `SELECT gio_hang_chi_tiet.id, gio_hang_chi_tiet.so_luong, san_pham.ten, san_pham.gia, san_pham.hinh_anh
+               FROM gio_hang_chi_tiet
+               JOIN san_pham ON gio_hang_chi_tiet.id_san_pham = san_pham.id_san_pham
+               WHERE gio_hang_chi_tiet.id_gio_hang = ?`;
 
+  const [result] = await db.query(sql, [cartId]);
+  return result;
+};
 
+const updateCartItemQuantity = async (itemId, quantity, userId) => {
+  const sql = 'UPDATE gio_hang_chi_tiet SET so_luong = ? WHERE id = ? AND id_gio_hang IN (SELECT id_gio_hang FROM gio_hang WHERE id_nguoi_dung = ?)';
+  const [result] = await db.query(sql, [quantity, itemId, userId]);
+  return result;
+};
 
+const deleteItem = async (cartId, productId) => {
+  const sql = 'DELETE FROM gio_hang_chi_tiet WHERE id_gio_hang = ? AND id_san_pham = ?';
+  const [result] = await db.query(sql, [cartId, productId]);
+  return result;
+};
 
-const getCartItem = async (cartId)=>{
-    const sql=`SELECT 
-  gio_hang_chi_tiet.id, 
-  gio_hang_chi_tiet.so_luong, 
-  san_pham.ten, 
-  san_pham.gia, 
-  san_pham.hinh_anh
-FROM gio_hang_chi_tiet
-JOIN san_pham ON gio_hang_chi_tiet.id_san_pham = san_pham.id_san_pham
-WHERE gio_hang_chi_tiet.id_gio_hang = ?`
-    const [resulut]= await db.query(sql,[cartId])
-    return resulut
-}
-
-const createCart =async (userId) =>{
-    const result=db.query(`INSERT INTO gio_hang(id_nguoi_dung,ngay_tao) VALUES(?,Now())`,[userId])
-    return result;
-}
-
-
-const updateCartItemQuantity= async(itemId,quantity)=>{
-    const sql=`UPDATE gio_hang_chi_tiet SET so_luong=? where id=?`;
-    const [rel]= await db.query(sql,[quantity,itemId])
-    return rel;
-}
-
-const deleteItem=(cartId,productId)=>{
-    const sql=`DELETE FROM gio_hang_chi_tiet WHERE id_gio_hang=? AND id_san_pham=?`;
-    const [rel]=db.query(sql,[cartId,productId]);
-    return rel;
-}
-
-module.exports={
-    createCart,
-    getCartUserID,
-    getCartItem,
-    updateCartItemQuantity,
-    deleteItem
-
-}
-
+module.exports = {
+  getCartUserID,
+  createCart,
+  getCartItem,
+  updateCartItemQuantity,
+  deleteItem,
+};

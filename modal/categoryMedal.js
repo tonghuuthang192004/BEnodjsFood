@@ -41,7 +41,6 @@ const updateCategoryStatus = async (id, newStatus) => {
   const [result] = await db.query(sql, [newStatus, id]);
   return result;
 };
-
 const updateCategoryStatusMulti = async (ids, newStatus) => {
   if (!Array.isArray(ids) || ids.length === 0) {
     throw new Error('Danh sách IDs không hợp lệ');
@@ -50,12 +49,27 @@ const updateCategoryStatusMulti = async (ids, newStatus) => {
     throw new Error('Trạng thái không hợp lệ');
   }
 
+  // Kiểm tra ids có phải là mảng số hoặc chuỗi hợp lệ không
+  console.log('Updating IDs:', ids);
+  console.log('New Status:', newStatus);
+
+  // Chuyển ids thành mảng dấu hỏi "?" để chèn vào câu lệnh SQL
   const placeholders = ids.map(() => '?').join(', ');
   const sql = `UPDATE danh_muc SET trang_thai = ? WHERE id_danh_muc IN (${placeholders})`;
-  const params = [newStatus, ...ids];
 
-  const [result] = await db.query(sql, params);
-  return result;
+  // Thêm newStatus vào đầu mảng params và ids vào sau
+  const params = [newStatus, ...ids];
+  console.log('SQL Query:', sql);
+  console.log('SQL Params:', params);
+
+  try {
+    // Thực hiện truy vấn
+    const [result] = await db.query(sql, params);
+    return result;
+  } catch (err) {
+    console.error('Error executing query:', err);
+    throw new Error('Lỗi khi cập nhật trạng thái');
+  }
 };
 
 
