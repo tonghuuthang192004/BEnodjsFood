@@ -4,17 +4,25 @@ const Product = require('../../modal/client/productModal');
 //  console.log(Product);
 
 
-module.exports.index = async(req, res) =>{
+module.exports.index = async (req, res) => {
+  try {
+    const filters = {
+      search: req.query.search || undefined,
+    };
 
+   // console.log('Filters received:', filters);
 
-const fliters ={
-    search:req.query.search || undefined
-}
-const data= await Product.getAllProducts(fliters);
-res.json(data);
+    const data = await Product.getAllProducts(filters);
 
+//console.log('Data fetched:', data.length || 0);
 
-}
+    res.json(data);
+  } catch (error) {
+    console.error('Error in getAllProducts:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 
 module.exports.productId = async (req, res) => {
     try {
@@ -36,3 +44,8 @@ module.exports.productId = async (req, res) => {
         res.status(500).json({ error: 'Internal server error.' });
     }
 };
+
+module.exports.productHot = async (req,res)=>{
+  const data= await Product.getAllPorductHot();
+  res.json(data);
+}

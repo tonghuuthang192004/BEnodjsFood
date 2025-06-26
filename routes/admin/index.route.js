@@ -13,7 +13,7 @@ module.exports = (app) => {
   app.use(PathAdmin + '/order', orderRoute);
   app.use(PathAdmin + '/auth', authRoute);
   app.use(PathAdmin+'/user',userRoute)
-   app.listen(3000, () => {
-    console.log(`Server running at http://localhost:3000${PathAdmin}`);
-  });
+  //  app.listen(3000, () => {
+  //   console.log(`Server running at http://localhost:3000${PathAdmin}`);
+  // });
 };

@@ -38,9 +38,19 @@
       return rel[0];
       
   }
+  const getAllPorductHot= async()=>{
+       const trang_thai = 'active';
+    const [rows] = await db.query(
+      `SELECT * FROM san_pham WHERE deleted = 0 AND trang_thai = ? AND noi_bat = 1`,
+      [trang_thai]
+    );
+    return rows;
+  }
+  
 
   module.exports={
       getAllProducts,
-      getAllProductsId
+      getAllProductsId,
+      getAllPorductHot
   }
     
