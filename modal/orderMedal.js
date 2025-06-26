@@ -94,45 +94,55 @@ const orderDetail = async(orderId)=>{
 
 }
 
-const updateOrderStatus = async (orderId, newStatus) => {
-  const conn = await db.getConnection();
-  try {
-    await conn.beginTransaction();
 
-    // Cập nhật trạng thái đơn hàng
-    const [result] = await conn.query(
-      `UPDATE don_hang SET trang_thai = ? WHERE id_don_hang = ?`,
+
+const updateOrderStatus = async (orderId, newStatus) => {
+  try {
+    // 1. Kiểm tra trạng thái hiện tại
+    const [rows] = await db.query(
+      'SELECT trang_thai FROM don_hang WHERE id_don_hang = ?',
+      [orderId]
+    );
+
+    if (rows.length === 0) throw new Error('Không tìm thấy đơn hàng');
+
+    const order = rows[0];
+
+    if (order.trang_thai === newStatus) {
+      throw new Error(`Trạng thái đơn hàng đã là "${newStatus}"`);
+    }
+
+    // 2. Cập nhật trạng thái mới
+    const [updateResult] = await db.query(
+      'UPDATE don_hang SET trang_thai = ? WHERE id_don_hang = ?',
       [newStatus, orderId]
     );
 
-    if (result.affectedRows === 0) {
-      throw new Error('Không tìm thấy đơn hàng để cập nhật');
+    if (updateResult.affectedRows === 0) {
+      throw new Error('Không thể cập nhật trạng thái đơn hàng');
     }
 
-    // Thêm vào lịch sử trạng thái
-    await conn.query(
-      `INSERT INTO lich_su_don_hang (id_don_hang, thoi_gian, trang_thai, mo_ta) VALUES (?, NOW(), ?, ?)`,
-      [orderId, newStatus, `Cập nhật trạng thái thành ${newStatus}`]
+    // 3. Ghi log vào lịch sử
+    await db.query(
+      `INSERT INTO lich_su_don_hang (id_don_hang, thoi_gian, trang_thai, mo_ta)
+       VALUES (?, NOW(), ?, ?)`,
+      [orderId, newStatus, `Trạng thái chuyển thành ${newStatus}`]
     );
 
-    await conn.commit();
-    return { success: true };
-  } catch (error) {
-    await conn.rollback();
-    throw error;
-  } finally {
-    conn.release();
+    // 4. Lấy lại chi tiết đơn hàng sau khi cập nhật
+    const updated = await orderDetail(orderId);
+    return updated;
+
+  } catch (err) {
+    throw err;
   }
 };
-
-
-
-
 
 
 module.exports={
     getOrder,
     orderDetail,
+    updateOrderStatus
  
 
 }

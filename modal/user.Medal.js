@@ -103,7 +103,7 @@ const createUser = async (user) => {
   }
 };
 
-const updateUser = async (user,id_nguoi_dung) => {
+const updateUser = async (user, id_nguoi_dung) => {
   const {
     id_vai_tro,
     ten,
@@ -111,11 +111,10 @@ const updateUser = async (user,id_nguoi_dung) => {
     so_dien_thoai,
     trang_thai,
     avatar
-
   } = user;
 
-
-  const ngay_cap_nhat = new Date().toISOString().split('T')[0];
+const now = new Date();
+const ngay_cap_nhat = now.toISOString().slice(0, 19).replace('T', ' ');
 
   const query = `
     UPDATE nguoi_dung 
@@ -123,10 +122,13 @@ const updateUser = async (user,id_nguoi_dung) => {
     WHERE id_nguoi_dung = ?
   `;
 
-  const values = [id_danh_muc, ten, gia, mo_ta, trang_thai, hinh_anh, ngay_cap_nhat, id_nguoi_dung];
+  // Đảm bảo thứ tự giá trị đúng với câu query SQL
+  const values = [id_vai_tro, ten, email, so_dien_thoai, trang_thai, avatar, ngay_cap_nhat, id_nguoi_dung];
+
   const [res] = await db.query(query, values);
   return res;
 };
+
 
 
 const getAllUserId= async (id)=>{
