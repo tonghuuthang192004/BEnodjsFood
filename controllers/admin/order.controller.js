@@ -25,16 +25,13 @@ module.exports.updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { trang_thai } = req.body;
-
     // Kiểm tra trạng thái hợp lệ (nếu bạn muốn kiểm soát)
     const validStatuses = ['Đang xử lý', 'Xác nhận', 'Chờ thanh toán', 'Đã giao', 'Đã hủy'];
     if (!validStatuses.includes(trang_thai)) {
       return res.status(400).json({ success: false, message: 'Trạng thái không hợp lệ' });
     }
-
     // Gọi model để cập nhật trạng thái
     const updatedOrder = await orderModel.updateOrderStatus(id, trang_thai);
-
     res.json({
       success: true,
       message: 'Cập nhật trạng thái đơn hàng thành công',

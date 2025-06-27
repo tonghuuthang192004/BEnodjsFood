@@ -19,7 +19,7 @@ module.exports.creatPost =(req,res,next)=>{
     if (!trang_thai || !['active', 'inactive'].includes(trang_thai)) {
       return res.status(400).json({ message: 'Trạng thái không hợp lệ' });
     }
-    if (!mo_ta || !mo_ta.trim()) { // <- sai điều kiện ban đầu (kiểm tra theo ['active', 'inactive'])
+    if (!mo_ta || !mo_ta.trim()) { 
   return res.status(400).json({ message: 'Mô tả là bắt buộc' });
 }
 
