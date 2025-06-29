@@ -140,8 +140,8 @@ module.exports.getEditProduct = async (req, res) => {
 
 module.exports.editProduct = async (req, res) => {
   try {
-    console.log('Body:', req.body);
-    console.log('File:', req.file);
+    // console.log('Body:', req.body);
+    // console.log('File:', req.file);
     const id_san_pham = req.params.id_san_pham;
     const file = req.file;
     const {

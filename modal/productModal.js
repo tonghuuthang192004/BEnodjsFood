@@ -2,25 +2,37 @@ const db = require('../config/database');
 
 
 const getAllProducts = async (filters = {}) => {
-  let sql = `SELECT * FROM san_pham Where deleted=0 `; // dễ xử lý điều kiện động
+  let sql = `SELECT 
+    san_pham.id_san_pham,
+    san_pham.ten,
+    san_pham.hinh_anh,
+    san_pham.gia,
+    san_pham.trang_thai,
+    danh_muc.ten AS ten_danh_muc
+  FROM san_pham
+  INNER JOIN danh_muc ON san_pham.id_danh_muc = danh_muc.id_danh_muc
+  WHERE san_pham.deleted = 0`; // bỏ dấu ;
+
   const params = [];
 
+  // Nếu muốn lấy theo deleted khác 0, bạn có thể sửa điều kiện ở trên hoặc thêm filter này
   if (filters.deleted !== undefined) {
-    sql += ' AND deleted = ?';
+    sql += ' AND san_pham.deleted = ?';
     params.push(filters.deleted);
   }
 
   if (filters.status !== undefined) {
-    sql += ' AND trang_thai = ?';
+    sql += ' AND san_pham.trang_thai = ?';
     params.push(filters.status);
   }
 
   if (filters.search !== undefined) {
-    sql += ' AND LOWER(ten)  LIKE ?';
-    params.push(`%${filters.search}%`);
+    sql += ' AND LOWER(san_pham.ten) LIKE ?';
+    params.push(`%${filters.search.toLowerCase()}%`);
   }
 
-  sql += ' ORDER BY id_san_pham ASC';
+  sql += ' ORDER BY san_pham.id_san_pham ASC';
+
   if (filters.limit !== undefined && filters.offset !== undefined) {
     sql += ' LIMIT ? OFFSET ?';
     params.push(filters.limit, filters.offset);
@@ -32,6 +44,7 @@ const getAllProducts = async (filters = {}) => {
   const [rows] = await db.query(sql, params);
   return rows;
 };
+
 // update 1 trạng thái
 const updateProductStatus = async (id, newStatus) => {
   const sql = 'UPDATE san_pham SET trang_thai = ? WHERE id_san_pham = ?';

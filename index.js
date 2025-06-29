@@ -15,6 +15,7 @@ app.use(cors({
 
 app.use(cookieParser()); // Dùng cookie-parser để xử lý cookies
 
+var path=require('path')
 
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
@@ -38,6 +39,12 @@ app.use(express.static('public'));
 // gọi route
 route(app);
 routeAdmin(app);
+
+// tinymce
+app.use('/tinymce',express.static(
+  path.join(__dirname,'node_modules','tinymce')
+))
+
 
 // listen
 app.listen(port, '0.0.0.0', () => {

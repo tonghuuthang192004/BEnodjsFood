@@ -6,11 +6,6 @@ const validate=require('../../validate/product.validate')
 const storgaMulter=require('../../helper/storge')
 // multer
 const multer  = require('multer')
-
-
-
-
-
 const upload = multer( { storage: storgaMulter()})
 
 //end multer
@@ -19,15 +14,14 @@ router.get('/',controllerProduct.index);
 router.put('/change-status/:status/:id', controllerProduct.changeStatus);
 router.put('/change-multi',controllerProduct.changeMulti);
 router.delete('/deleted/:id',controllerProduct.deleteId);
+
 router.delete('/delete-multiple',controllerProduct.deleteMultiple)
+
 router.post('/create-product',
     
     upload.single('hinh_anh'),
     validate.creatPost
     ,controllerProduct.createProductItem);
-
-
-
 router.get('/edit-product/:id_san_pham', controllerProduct.getEditProduct); // chỉ lấy data
 
 router.post(
