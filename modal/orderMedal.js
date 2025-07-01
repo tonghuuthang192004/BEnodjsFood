@@ -1,25 +1,41 @@
 const db=require('../config/database');
 const createOrder = async (orderData) => {
   try {
-    // Bắt đầu giao dịch
     await db.query('START TRANSACTION');
 
-    // 1. Tạo đơn hàng
-    const [result] = await db.query(
-      `INSERT INTO don_hang (id_nguoi_dung, id_dia_chi, phuong_thuc_thanh_toan, trang_thai, trang_thai_thanh_toan, tong_gia, ghi_chu, ngay_tao)
-       VALUES (?, ?, ?, 'Chưa xác nhận', 'Chưa thanh toán', ?, ?, NOW())`,
-      [
-        orderData.id_nguoi_dung,
-        orderData.id_dia_chi,
-        orderData.phuong_thuc_thanh_toan,
-        orderData.tong_gia,
-        orderData.ghi_chu || null
-      ]
-    );
+    // Tạo câu truy vấn động tùy có momo_order_id hay không
+    let insertQuery = `
+      INSERT INTO don_hang (
+        id_nguoi_dung,
+        id_dia_chi,
+        phuong_thuc_thanh_toan,
+        trang_thai,
+        trang_thai_thanh_toan,
+        tong_gia,
+        ghi_chu,
+        ngay_tao
+        ${orderData.momo_order_id ? ', momo_order_id' : ''}
+      ) VALUES (?, ?, ?, 'Chưa xác nhận', 'Chưa thanh toán', ?, ?, NOW()
+        ${orderData.momo_order_id ? ', ?' : ''}
+      )
+    `;
 
+    let insertValues = [
+      orderData.id_nguoi_dung,
+      orderData.id_dia_chi,
+      orderData.phuong_thuc_thanh_toan,
+      orderData.tong_gia,
+      orderData.ghi_chu || null
+    ];
+
+    if (orderData.momo_order_id) {
+      insertValues.push(orderData.momo_order_id);
+    }
+
+    const [result] = await db.query(insertQuery, insertValues);
     const orderId = result.insertId;
 
-    // 2. Chi tiết sản phẩm
+    // Thêm chi tiết sản phẩm
     for (const item of orderData.chi_tiet_san_pham) {
       await db.query(
         `INSERT INTO chi_tiet_don_hang (id_don_hang, id_san_pham, so_luong, ghi_chu)
@@ -28,31 +44,22 @@ const createOrder = async (orderData) => {
       );
     }
 
-    // 3. Ghi lịch sử đơn hàng
-    try {
-      await db.query(
-        `INSERT INTO lich_su_don_hang (id_don_hang, thoi_gian, trang_thai, mo_ta)
-         VALUES (?, NOW(), 'Chưa xác nhận', 'Tạo đơn hàng mới')`,
-        [orderId]
-      );
-    } catch (err) {
-      // In lỗi nếu không thể insert vào lich_su_don_hang
-      console.error('Error inserting into lich_su_don_hang:', err.message);
-      await db.query('ROLLBACK');
-      throw err;
-    }
+    // Ghi lịch sử đơn hàng
+    await db.query(
+      `INSERT INTO lich_su_don_hang (id_don_hang, thoi_gian, trang_thai, mo_ta)
+       VALUES (?, NOW(), 'Chưa xác nhận', 'Tạo đơn hàng mới')`,
+      [orderId]
+    );
 
-    // Commit giao dịch
     await db.query('COMMIT');
     return orderId;
 
   } catch (err) {
-    // Rollback giao dịch nếu có lỗi
     await db.query('ROLLBACK');
+    console.error('❌ Lỗi tạo đơn hàng:', err.message);
     throw err;
   }
 };
-
 
 
 
@@ -303,12 +310,19 @@ const updateOrderStatus = async (orderId, newStatus, newPaymentStatus) => {
 //     throw error;
 //   }
 // };
-
+const deleteOrder = async (orderId) => {
+  const [result] = await db.query(
+    'DELETE FROM don_hang WHERE id_don_hang = ?',
+    [orderId]
+  );
+  return result;
+};
 module.exports={
     createOrder,
     getOrder,
     orderDetail,
     updateOrderStatus,
+    deleteOrder
     
  
 
