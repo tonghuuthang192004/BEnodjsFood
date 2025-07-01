@@ -1,4 +1,59 @@
 const db=require('../config/database');
+const createOrder = async (orderData) => {
+  try {
+    // Bắt đầu giao dịch
+    await db.query('START TRANSACTION');
+
+    // 1. Tạo đơn hàng
+    const [result] = await db.query(
+      `INSERT INTO don_hang (id_nguoi_dung, id_dia_chi, phuong_thuc_thanh_toan, trang_thai, trang_thai_thanh_toan, tong_gia, ghi_chu, ngay_tao)
+       VALUES (?, ?, ?, 'Chưa xác nhận', 'Chưa thanh toán', ?, ?, NOW())`,
+      [
+        orderData.id_nguoi_dung,
+        orderData.id_dia_chi,
+        orderData.phuong_thuc_thanh_toan,
+        orderData.tong_gia,
+        orderData.ghi_chu || null
+      ]
+    );
+
+    const orderId = result.insertId;
+
+    // 2. Chi tiết sản phẩm
+    for (const item of orderData.chi_tiet_san_pham) {
+      await db.query(
+        `INSERT INTO chi_tiet_don_hang (id_don_hang, id_san_pham, so_luong, ghi_chu)
+         VALUES (?, ?, ?, ?)`,
+        [orderId, item.id_san_pham, item.so_luong, item.ghi_chu || null]
+      );
+    }
+
+    // 3. Ghi lịch sử đơn hàng
+    try {
+      await db.query(
+        `INSERT INTO lich_su_don_hang (id_don_hang, thoi_gian, trang_thai, mo_ta)
+         VALUES (?, NOW(), 'Chưa xác nhận', 'Tạo đơn hàng mới')`,
+        [orderId]
+      );
+    } catch (err) {
+      // In lỗi nếu không thể insert vào lich_su_don_hang
+      console.error('Error inserting into lich_su_don_hang:', err.message);
+      await db.query('ROLLBACK');
+      throw err;
+    }
+
+    // Commit giao dịch
+    await db.query('COMMIT');
+    return orderId;
+
+  } catch (err) {
+    // Rollback giao dịch nếu có lỗi
+    await db.query('ROLLBACK');
+    throw err;
+  }
+};
+
+
 
 
 const getOrder =  async (status)=>{
@@ -95,54 +150,166 @@ const orderDetail = async(orderId)=>{
 }
 
 
-
-const updateOrderStatus = async (orderId, newStatus) => {
+const updateOrderStatus = async (orderId, newStatus, newPaymentStatus) => {
   try {
-    // 1. Kiểm tra trạng thái hiện tại
+    // Bước 1: Lấy thông tin đơn hàng hiện tại
     const [rows] = await db.query(
-      'SELECT trang_thai FROM don_hang WHERE id_don_hang = ?',
+      'SELECT trang_thai, trang_thai_thanh_toan, tong_gia, phuong_thuc_thanh_toan FROM don_hang WHERE id_don_hang = ?',
       [orderId]
     );
 
     if (rows.length === 0) throw new Error('Không tìm thấy đơn hàng');
 
     const order = rows[0];
+    console.log('Order hiện tại:', order);
 
-    if (order.trang_thai === newStatus) {
-      throw new Error(`Trạng thái đơn hàng đã là "${newStatus}"`);
+    // Bước 2: Cập nhật trạng thái đơn hàng nếu có sự thay đổi
+    let sql = 'UPDATE don_hang SET trang_thai = ?';
+    const params = [newStatus];
+
+    // Nếu trạng thái thanh toán thay đổi, cập nhật nó
+    if (newPaymentStatus && newPaymentStatus !== order.trang_thai_thanh_toan) {
+      sql += ', trang_thai_thanh_toan = ?';
+      params.push(newPaymentStatus);
     }
 
-    // 2. Cập nhật trạng thái mới
-    const [updateResult] = await db.query(
-      'UPDATE don_hang SET trang_thai = ? WHERE id_don_hang = ?',
-      [newStatus, orderId]
-    );
+    // Xác định điều kiện để cập nhật trạng thái đơn hàng
+    sql += ' WHERE id_don_hang = ?';
+    params.push(orderId);
+
+    const [updateResult] = await db.query(sql, params);
 
     if (updateResult.affectedRows === 0) {
       throw new Error('Không thể cập nhật trạng thái đơn hàng');
     }
 
-    // 3. Ghi log vào lịch sử
+    console.log(`Đã cập nhật trạng thái đơn hàng, affectedRows: ${updateResult.affectedRows}`);
+
+    // Bước 3: Xử lý thanh toán khi trạng thái là "Đã giao"
+    if (newStatus === 'Đã giao') {
+      console.log('Trạng thái đơn hàng đã chuyển thành "Đã giao"');
+
+      // Kiểm tra thanh toán
+      const [checkPayment] = await db.query('SELECT * FROM thanh_toan WHERE id_don_hang = ?', [orderId]);
+      console.log('Kiểm tra thanh toán:', checkPayment);
+
+      if (checkPayment.length > 0) {
+  // Kiểm tra xem trạng thái thanh toán có phải là 'Chờ thanh toán' không
+  if (checkPayment[0].trang_thai === 'Chờ thanh toán') {
+    // Cập nhật trạng thái thanh toán thành "Đã thanh toán"
+    await db.query(`
+      UPDATE thanh_toan 
+      SET trang_thai = 'Đã thanh toán', ngay_thanh_toan = NOW() 
+      WHERE id_don_hang = ?
+    `, [orderId]);
+
+    console.log('Cập nhật trạng thái thanh toán thành "Đã thanh toán".');
+  } else {
+    console.log('Trạng thái thanh toán đã là "Đã thanh toán" hoặc trạng thái khác.');
+  }
+
+  // Cập nhật lại trạng thái thanh toán trong bảng don_hang
+  if (order.trang_thai_thanh_toan !== 'Đã thanh toán') {
+    await db.query(`
+      UPDATE don_hang SET trang_thai_thanh_toan = 'Đã thanh toán' WHERE id_don_hang = ?
+    `, [orderId]);
+    console.log('Cập nhật trạng thái thanh toán trong bảng don_hang thành "Đã thanh toán".');
+  }
+} else {
+  console.log('Không có thanh toán để cập nhật.');
+}
+    } 
+
+    // Bước 4: Xử lý thanh toán khi trạng thái là "Đã hủy"
+    else if (newStatus === 'Đã hủy') {
+      console.log('Trạng thái đơn hàng đã chuyển thành "Đã hủy"');
+
+      // Kiểm tra xem có thanh toán không
+      const [payments] = await db.query('SELECT * FROM thanh_toan WHERE id_don_hang = ?', [orderId]);
+      if (payments.length > 0) {
+        // Nếu có thanh toán, cập nhật trạng thái thanh toán thành "Đã hoàn tiền"
+        await db.query(`
+          UPDATE thanh_toan
+          SET trang_thai = 'Đã hoàn tiền'
+          WHERE id_don_hang = ?
+        `, [orderId]);
+
+        await db.query(`
+          UPDATE don_hang SET trang_thai_thanh_toan = 'Đã hoàn tiền' WHERE id_don_hang = ?
+        `, [orderId]);
+
+        console.log('Trạng thái thanh toán của đơn hàng đã được cập nhật thành "Đã hoàn tiền".');
+      } else {
+        console.log('Không có thanh toán để hoàn tiền.');
+      }
+    }
+
+    // Bước 5: Ghi lại lịch sử thay đổi trạng thái
     await db.query(
       `INSERT INTO lich_su_don_hang (id_don_hang, thoi_gian, trang_thai, mo_ta)
-       VALUES (?, NOW(), ?, ?)`,
+       VALUES (?, NOW(), ?, ?)`, 
       [orderId, newStatus, `Trạng thái chuyển thành ${newStatus}`]
     );
 
-    // 4. Lấy lại chi tiết đơn hàng sau khi cập nhật
+    // Bước 6: Trả về chi tiết đơn hàng sau khi cập nhật
     const updated = await orderDetail(orderId);
+    console.log('Đơn hàng sau cập nhật:', updated);
     return updated;
 
   } catch (err) {
+    console.error('Lỗi trong quá trình cập nhật trạng thái đơn hàng:', err);
     throw err;
   }
 };
 
 
+
+
+// const updatePaymentStatus = async (orderId, newPaymentStatus) => {
+//   try {
+//     // 1. Kiểm tra đơn hàng có tồn tại không
+//     const [rows] = await db.query(
+//       'SELECT id_don_hang FROM don_hang WHERE id_don_hang = ?',
+//       [orderId]
+//     );
+//     if (rows.length === 0) {
+//       throw new Error('Không tìm thấy đơn hàng');
+//     }
+
+//     // 2. Cập nhật trạng thái thanh toán
+//     const [updateResult] = await db.query(
+//       'UPDATE don_hang SET trang_thai_thanh_toan = ? WHERE id_don_hang = ?',
+//       [newPaymentStatus, orderId]
+//     );
+
+//     if (updateResult.affectedRows === 0) {
+//       throw new Error('Cập nhật trạng thái thanh toán thất bại');
+//     }
+
+//     // 3. Ghi log lịch sử
+//     await db.query(
+//       `INSERT INTO lich_su_don_hang (id_don_hang, thoi_gian, trang_thai, mo_ta)
+//        VALUES (?, NOW(), ?, ?)`,
+//       [orderId, newPaymentStatus, `Thanh toán chuyển thành ${newPaymentStatus}`]
+//     );
+
+//     // 4. Trả về chi tiết đơn hàng đã cập nhật (nếu cần)
+//     const updatedOrder = await orderDetail(orderId);
+//     return updatedOrder;
+    
+
+//   } catch (error) {
+//     console.error('Lỗi cập nhật trạng thái thanh toán:', error.message);
+//     throw error;
+//   }
+// };
+
 module.exports={
+    createOrder,
     getOrder,
     orderDetail,
-    updateOrderStatus
+    updateOrderStatus,
+    
  
 
 }
