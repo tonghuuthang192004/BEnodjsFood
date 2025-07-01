@@ -3,8 +3,8 @@ const createOrder = async (orderData) => {
   try {
     await db.query('START TRANSACTION');
 
-    // Tạo câu truy vấn động tùy có momo_order_id hay không
-    let insertQuery = `
+    // 1. Insert đơn hàng trước, chưa có momo_order_id
+    const insertQuery = `
       INSERT INTO don_hang (
         id_nguoi_dung,
         id_dia_chi,
@@ -14,28 +14,32 @@ const createOrder = async (orderData) => {
         tong_gia,
         ghi_chu,
         ngay_tao
-        ${orderData.momo_order_id ? ', momo_order_id' : ''}
-      ) VALUES (?, ?, ?, 'Chưa xác nhận', 'Chưa thanh toán', ?, ?, NOW()
-        ${orderData.momo_order_id ? ', ?' : ''}
-      )
+      ) VALUES (?, ?, ?, 'Chưa xác nhận', 'Chưa thanh toán', ?, ?, NOW())
     `;
 
-    let insertValues = [
+    const insertValues = [
       orderData.id_nguoi_dung,
       orderData.id_dia_chi,
       orderData.phuong_thuc_thanh_toan,
       orderData.tong_gia,
-      orderData.ghi_chu || null
+      orderData.ghi_chu || null,
     ];
 
-    if (orderData.momo_order_id) {
-      insertValues.push(orderData.momo_order_id);
-    }
-
     const [result] = await db.query(insertQuery, insertValues);
-    const orderId = result.insertId;
 
-    // Thêm chi tiết sản phẩm
+    // 2. Lấy id_don_hang vừa insert
+    const orderId = result.insertId;  // chính là id_don_hang
+
+    // 3. Sinh momo_order_id dựa trên orderId
+    const momo_order_id = `MOMO_${Date.now()}_${orderId}`;
+
+    // 4. Update lại momo_order_id vào đơn hàng
+    await db.query(
+      `UPDATE don_hang SET momo_order_id = ? WHERE id_don_hang = ?`,
+      [momo_order_id, orderId]
+    );
+
+    // 5. Thêm chi tiết sản phẩm
     for (const item of orderData.chi_tiet_san_pham) {
       await db.query(
         `INSERT INTO chi_tiet_don_hang (id_don_hang, id_san_pham, so_luong, ghi_chu)
@@ -44,7 +48,7 @@ const createOrder = async (orderData) => {
       );
     }
 
-    // Ghi lịch sử đơn hàng
+    // 6. Ghi lịch sử đơn hàng
     await db.query(
       `INSERT INTO lich_su_don_hang (id_don_hang, thoi_gian, trang_thai, mo_ta)
        VALUES (?, NOW(), 'Chưa xác nhận', 'Tạo đơn hàng mới')`,
@@ -52,7 +56,7 @@ const createOrder = async (orderData) => {
     );
 
     await db.query('COMMIT');
-    return orderId;
+    return { orderId, momo_order_id };
 
   } catch (err) {
     await db.query('ROLLBACK');
@@ -60,7 +64,6 @@ const createOrder = async (orderData) => {
     throw err;
   }
 };
-
 
 
 const getOrder =  async (status)=>{
@@ -327,3 +330,4 @@ module.exports={
  
 
 }
+

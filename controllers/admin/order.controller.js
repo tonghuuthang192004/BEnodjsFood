@@ -110,7 +110,7 @@ module.exports.createOrderAndPay = async (req, res) => {
 
   try {
     // 1. Tạo đơn hàng trong hệ thống
-    const orderId = await orderModel.createOrder(orderData);
+    const {orderId,momo_order_id} = await orderModel.createOrder(orderData);
 
     // 2. Nếu chọn thanh toán MoMo
     if (orderData.phuong_thuc_thanh_toan === 'momo') {
@@ -120,12 +120,12 @@ module.exports.createOrderAndPay = async (req, res) => {
       const orderInfo = `Thanh toán đơn hàng #${orderId}`;
       const redirectUrl = 'https://webhook.site/b3088a6a-2d17-4f8d-a383-71389a6c600b';
 
-  var ipnUrl = 'https://aa61-2402-800-63ac-9375-686b-c5df-f8fc-2535.ngrok-free.app/admin/cod/callback';
-      const momoOrderId = 'MOMO_' + Date.now(); // orderId gửi MoMo
+  var ipnUrl = 'https://31c7-2402-800-63ac-9375-1078-6f06-df9a-16d3.ngrok-free.app/admin/cod/callback';
+      // const momoOrderId = 'MOMO_' + Date.now(); // orderId gửi MoMo
       const requestId = 'REQ_' + Date.now();
       const extraData = '';
 
-      const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${momoOrderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
+      const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${momo_order_id}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
 
       const signature = crypto.createHmac('sha256', secretKey).update(rawSignature).digest('hex');
 
@@ -135,7 +135,7 @@ module.exports.createOrderAndPay = async (req, res) => {
         storeId: "Store001",
         requestId,
         amount,
-        orderId: momoOrderId,
+        orderId: momo_order_id,
         orderInfo,
         redirectUrl,
         ipnUrl,

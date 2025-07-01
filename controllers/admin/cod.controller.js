@@ -87,8 +87,9 @@ module.exports.payOrderCODController = async (req, res) => {
 // };
 
 module.exports.callback = async (req, res) => {
-  // console.log("📥 MoMo callback nhận:", req.body);
-  // res.send('ok');
+  console.log("📥 MoMo callback nhận:", req.body);
+  // res.send('ok'); // <-- Remove this line
+
   const {
     orderId,    // momo_order_id
     amount,
@@ -113,7 +114,9 @@ module.exports.callback = async (req, res) => {
       );
 
       if (!orders.length) {
-        return res.status(404).json({
+        // Even if the order isn't found, MoMo successfully delivered the callback.
+        // Respond with 200 OK to acknowledge receipt, but indicate the internal error.
+        return res.status(200).json({ // Changed to 200 OK here
           success: false,
           message: "❌ Không tìm thấy đơn hàng"
         });
@@ -130,7 +133,7 @@ module.exports.callback = async (req, res) => {
 
       if (!existing.length) {
         await db.query(
-          `INSERT INTO thanh_toan 
+          `INSERT INTO thanh_toan
           (id_don_hang, so_tien, phuong_thuc, trang_thai, ngay_thanh_toan)
           VALUES (?, ?, 'MoMo', 'Đã thanh toán', NOW())`,
           [idDonHang, amount]
@@ -138,7 +141,7 @@ module.exports.callback = async (req, res) => {
         console.log('✅ Insert thanh toán');
       } else {
         await db.query(
-          `UPDATE thanh_toan 
+          `UPDATE thanh_toan
           SET trang_thai = 'Đã thanh toán', ngay_thanh_toan = NOW()
           WHERE id_don_hang = ? AND phuong_thuc = 'MoMo'`,
           [idDonHang]
@@ -148,7 +151,7 @@ module.exports.callback = async (req, res) => {
 
       // 3. Cập nhật đơn hàng
       await db.query(
-        `UPDATE don_hang 
+        `UPDATE don_hang
         SET trang_thai = ?, trang_thai_thanh_toan = ?, phuong_thuc_thanh_toan = ?
         WHERE id_don_hang = ?`,
         ['Đã giao', 'Đã thanh toán', 'MoMo', idDonHang]
@@ -162,12 +165,15 @@ module.exports.callback = async (req, res) => {
         [idDonHang, 'Đã giao', 'Thanh toán MoMo thành công']
       );
 
+      // This is the correct and final response for a successful MoMo processing
       return res.status(200).json({
         success: true,
         message: "✅ Đã xử lý callback MoMo thành công"
       });
     } else {
-      return res.status(400).json({
+      // For a failed payment from MoMo, respond with 200 OK to acknowledge receipt
+      // but indicate the failure in your JSON response.
+      return res.status(200).json({ // Changed to 200 OK here
         success: false,
         message: `❌ Thanh toán thất bại từ MoMo: ${message}`,
         resultCode
@@ -175,9 +181,11 @@ module.exports.callback = async (req, res) => {
     }
   } catch (error) {
     console.error('❌ Lỗi xử lý callback:', error);
-    return res.status(500).json({
+    // In case of a server error during processing, still try to respond with 200 OK
+    // to MoMo to acknowledge the callback, but indicate internal server error.
+    return res.status(200).json({ // Changed to 200 OK here
       success: false,
-      message: "Lỗi server",
+      message: "Lỗi server nội bộ khi xử lý MoMo callback", // More specific message
       error: error.message
     });
   }
