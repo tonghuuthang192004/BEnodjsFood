@@ -3,7 +3,7 @@ const createOrder = async (orderData) => {
   try {
     await db.query('START TRANSACTION');
 
-    // 1. Insert đơn hàng trước, chưa có momo_order_id
+    // 1. Insert đơn hàng (đã có giảm giá nếu có)
     const insertQuery = `
       INSERT INTO don_hang (
         id_nguoi_dung,
@@ -12,9 +12,12 @@ const createOrder = async (orderData) => {
         trang_thai,
         trang_thai_thanh_toan,
         tong_gia,
+        tong_gia_truoc_giam,
+        gia_tri_giam,
+        id_giam_gia,
         ghi_chu,
         ngay_tao
-      ) VALUES (?, ?, ?, 'Chưa xác nhận', 'Chưa thanh toán', ?, ?, NOW())
+      ) VALUES (?, ?, ?, 'Chưa xác nhận', 'Chưa thanh toán', ?, ?, ?, ?, ?, NOW())
     `;
 
     const insertValues = [
@@ -22,24 +25,24 @@ const createOrder = async (orderData) => {
       orderData.id_dia_chi,
       orderData.phuong_thuc_thanh_toan,
       orderData.tong_gia,
+      orderData.tong_gia_truoc_giam || null,
+      orderData.gia_tri_giam || 0,
+      orderData.id_giam_gia || null,
       orderData.ghi_chu || null,
     ];
 
     const [result] = await db.query(insertQuery, insertValues);
 
-    // 2. Lấy id_don_hang vừa insert
-    const orderId = result.insertId;  // chính là id_don_hang
-
-    // 3. Sinh momo_order_id dựa trên orderId
+    const orderId = result.insertId;
     const momo_order_id = `MOMO_${Date.now()}_${orderId}`;
 
-    // 4. Update lại momo_order_id vào đơn hàng
+    // 2. Update momo_order_id
     await db.query(
       `UPDATE don_hang SET momo_order_id = ? WHERE id_don_hang = ?`,
       [momo_order_id, orderId]
     );
 
-    // 5. Thêm chi tiết sản phẩm
+    // 3. Insert chi tiết đơn hàng
     for (const item of orderData.chi_tiet_san_pham) {
       await db.query(
         `INSERT INTO chi_tiet_don_hang (id_don_hang, id_san_pham, so_luong, ghi_chu)
@@ -48,7 +51,7 @@ const createOrder = async (orderData) => {
       );
     }
 
-    // 6. Ghi lịch sử đơn hàng
+    // 4. Ghi lịch sử
     await db.query(
       `INSERT INTO lich_su_don_hang (id_don_hang, thoi_gian, trang_thai, mo_ta)
        VALUES (?, NOW(), 'Chưa xác nhận', 'Tạo đơn hàng mới')`,

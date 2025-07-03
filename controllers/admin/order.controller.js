@@ -4,6 +4,7 @@ const secretKey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz'; // đổi theo bạn
 const accessKey = 'F8BBA842ECF85'; // đổi theo bạn
 const crypto = require('crypto');
 const axios = require('axios');
+const moment = require('moment');
 
 const db=require('../../config/database');
 
@@ -108,7 +109,75 @@ module.exports.updatePaymentStatusController = async (req, res) => {
 module.exports.createOrderAndPay = async (req, res) => {
   const orderData = req.body;
 
+  
+
+  
   try {
+      // =======================
+    // ✅ TÍNH TỔNG GIÁ + GIẢM
+    // =======================
+ let tong_gia_truoc_giam = 0;
+
+for (const sp of orderData.chi_tiet_san_pham) {
+  const [rows] = await db.execute(`SELECT gia FROM san_pham WHERE id_san_pham = ?`, [sp.id_san_pham]);
+
+  if (rows.length === 0) {
+    return res.status(400).json({ message: `Sản phẩm với ID ${sp.id_san_pham} không tồn tại.` });
+  }
+
+  const gia = rows[0].gia;
+  sp.gia = gia; // gán lại để insert vào chi tiết đơn hàng
+  tong_gia_truoc_giam += gia * sp.so_luong;
+}
+let gia_tri_giam = 0;
+
+if (orderData.ma_giam_gia?.trim()) {
+  const ma = orderData.ma_giam_gia.trim();
+
+  const [rows] = await db.execute(`
+    SELECT * FROM giam_gia 
+    WHERE ma_giam_gia = ? AND deleted = 0 AND trang_thai = 'active'
+  `, [ma]);
+
+  const giamGia = rows[0];
+  if (!giamGia) return res.status(400).json({ message: 'Mã giảm giá không hợp lệ.' });
+
+  const now = moment();
+
+  if (now.isBefore(giamGia.ngay_bat_dau) || now.isAfter(giamGia.ngay_ket_thuc)) {
+    return res.status(400).json({ message: 'Mã giảm giá đã hết hạn hoặc chưa bắt đầu.' });
+  }
+
+  if (giamGia.so_luong_con_lai <= 0) {
+    return res.status(400).json({ message: 'Mã giảm giá đã hết lượt sử dụng.' });
+  }
+
+  if (tong_gia_truoc_giam < giamGia.dieu_kien) {
+    return res.status(400).json({ message: `Đơn hàng phải từ ${giamGia.dieu_kien}đ để dùng mã.` });
+  }
+
+  // Tính giá trị giảm
+  if (giamGia.loai === 'phan_tram') {
+    gia_tri_giam = Math.floor(tong_gia_truoc_giam * giamGia.gia_tri / 100);
+  } else {
+    gia_tri_giam = giamGia.gia_tri;
+  }
+
+  // Trừ lượt
+  await db.execute(`
+    UPDATE giam_gia 
+    SET so_luong_con_lai = so_luong_con_lai - 1 
+    WHERE id_giam_gia = ?
+  `, [giamGia.id_giam_gia]);
+
+  // Gán id_giam_gia vào orderData để lưu đơn hàng
+  orderData.id_giam_gia = giamGia.id_giam_gia;
+}
+
+// ✅ GÁN GIÁ TRỊ VÀO orderData
+orderData.tong_gia_truoc_giam = tong_gia_truoc_giam;
+orderData.gia_tri_giam = gia_tri_giam;
+orderData.tong_gia = tong_gia_truoc_giam - gia_tri_giam;
     // 1. Tạo đơn hàng trong hệ thống
     const {orderId,momo_order_id} = await orderModel.createOrder(orderData);
 
