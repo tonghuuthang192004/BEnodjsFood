@@ -7,11 +7,18 @@ const getCartUserID = async (userId) => {
   return result.length > 0 ? result[0] : null;
 };
 
+// const createCart = async (userId) => {
+//   const sql = 'INSERT INTO gio_hang (id_nguoi_dung, ngay_tao) VALUES (?, NOW())';
+//   const [result] = await db.query(sql, [userId]);
+//   return result;
+// };
 const createCart = async (userId) => {
   const sql = 'INSERT INTO gio_hang (id_nguoi_dung, ngay_tao) VALUES (?, NOW())';
   const [result] = await db.query(sql, [userId]);
-  return result;
+  const [cart] = await db.query('SELECT * FROM gio_hang WHERE id_gio_hang = ?', [result.insertId]);
+  return cart[0];
 };
+
 
 const getCartItem = async (cartId) => {
   const sql = `SELECT gio_hang_chi_tiet.id, gio_hang_chi_tiet.so_luong, san_pham.ten, san_pham.gia, san_pham.hinh_anh
@@ -26,7 +33,12 @@ const getCartItem = async (cartId) => {
 const updateCartItemQuantity = async (itemId, quantity, userId) => {
   const sql = 'UPDATE gio_hang_chi_tiet SET so_luong = ? WHERE id = ? AND id_gio_hang IN (SELECT id_gio_hang FROM gio_hang WHERE id_nguoi_dung = ?)';
   const [result] = await db.query(sql, [quantity, itemId, userId]);
-  return result;
+  // return result;
+  if (result.affectedRows === 0) {
+  throw new Error('Không tìm thấy sản phẩm hoặc không có quyền');
+}
+return result;
+
 };
 
 const deleteItem = async (cartId, productId) => {

@@ -2,12 +2,16 @@
 const express = require('express');
 const router = express.Router();
 const cartController = require('../../controllers/client/cart.controller');
-const authMiddleware = require('../../helper/middleware');  // Thêm middleware xác thực
+const { authenticate } = require('../../helper/middleware'); // ✅ dùng destructuring nếu export nhiều hàm
 
-router.get('/', authMiddleware.authenticate, cartController.getUserCart);
-router.post('/create', authMiddleware.authenticate, cartController.createCart);
-router.get('/items', authMiddleware.authenticate, cartController.getCartItems);
-router.put('/item', authMiddleware.authenticate, cartController.updateItemQuantity);
-router.delete('/item', authMiddleware.authenticate, cartController.deleteItem);
+// 📦 API Giỏ hàng
+router.get('/', authenticate, cartController.getUserCart); // Lấy giỏ hàng
+router.post('/create', authenticate, cartController.createCart); // Tạo giỏ hàng mới
+router.get('/items', authenticate, cartController.getCartItems); // Lấy sản phẩm trong giỏ
+router.put('/item', authenticate, cartController.updateItemQuantity); // Cập nhật số lượng sản phẩm
+router.delete('/item', authenticate, cartController.deleteItem); // Xoá 1 sản phẩm khỏi giỏ
+
+// // 🗑 API clear toàn bộ giỏ hàng
+// router.delete('/clear', authenticate, cartController.clearCart);
 
 module.exports = router;
