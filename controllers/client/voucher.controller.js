@@ -4,7 +4,8 @@ const VoucherModel = require('../../modal/client/voucher.model');
 exports.getActiveVouchers = async (req, res) => {
   try {
     const vouchers = await VoucherModel.getAllActiveVouchers();
-    res.status(200).json({ success: true, data: vouchers });
+    res.status(200).json(vouchers);
+
   } catch (error) {
     console.error('❌ [getActiveVouchers] Error:', error);
     res.status(500).json({ success: false, message: 'Lỗi server khi lấy danh sách voucher' });
@@ -46,7 +47,8 @@ exports.getSavedVouchers = async (req, res) => {
 
   try {
     const savedVouchers = await VoucherModel.getSavedVouchersByUser(userId);
-    res.status(200).json({ success: true, data: savedVouchers });
+   res.status(200).json(savedVouchers);
+
   } catch (error) {
     console.error('❌ [getSavedVouchers] Error:', error);
     res.status(500).json({ success: false, message: 'Lỗi server khi lấy voucher đã lưu' });

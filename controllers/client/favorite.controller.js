@@ -23,6 +23,17 @@ exports.getFavorites = async (req, res) => {
 exports.addFavorite = async (req, res) => {
   try {
     const { userId, productId } = req.body;
+
+    // 🔥 Check sản phẩm đã tồn tại chưa
+    const existed = await favoriteModel.isFavorite(userId, productId);
+    if (existed) {
+      return res.status(200).json({
+        success: true,
+        message: 'Sản phẩm đã có trong danh sách yêu thích'
+      });
+    }
+
+    // ➕ Thêm mới nếu chưa có
     await favoriteModel.addFavorite(userId, productId);
 
     res.status(201).json({
@@ -60,25 +71,17 @@ exports.deleteFavorite = async (req, res) => {
 };
 
 // ✅ Xoá tất cả sản phẩm yêu thích
-// 🗑️ Xoá toàn bộ sản phẩm yêu thích
-// 🗑️ Xoá toàn bộ sản phẩm yêu thích
 exports.clearFavorites = async (req, res) => {
   try {
     const userId = req.params.userId;
-    console.log('🟡 [CONTROLLER] clearFavorites called with userId:', userId);
-
     const result = await favoriteModel.clearFavoritesByUser(userId);
 
-    console.log('🟡 [CONTROLLER] clearFavorites result:', result);
-
     if (result.affectedRows > 0) {
-      console.log('✅ [CONTROLLER] Deleted', result.affectedRows, 'rows');
       return res.status(200).json({
         success: true,
         message: 'Đã xoá toàn bộ sản phẩm yêu thích'
       });
     } else {
-      console.log('⚠️ [CONTROLLER] No rows deleted');
       return res.status(200).json({
         success: true,
         message: 'Danh sách yêu thích đã trống'

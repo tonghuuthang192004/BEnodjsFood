@@ -1,20 +1,27 @@
 const express = require('express');
 const router = express.Router();
 const orderController = require('../../controllers/client/order.controller');
-const verifyToken = require('../../middleware/user.middleware');
+const { authenticate } = require('../../helper/middleware');
 
-router.use(verifyToken); // ✅ Bắt buộc người dùng phải đăng nhập
+// 📥 Lấy danh sách đơn hàng của user (có lọc trạng thái ?status)
+router.get('/', authenticate, orderController.getOrdersByUser);
 
-// ✅ Đặt hàng
-router.post('/checkout', orderController.checkout);
+// 🔍 Lấy chi tiết 1 đơn hàng của user
+router.get('/:id', authenticate, orderController.getOrderDetailByUser);
 
-// ✅ Lấy lịch sử đơn hàng của người dùng
-router.get('/my', orderController.getByUser);
+// 🛒 Tạo đơn hàng mới (COD hoặc MoMo)
+router.post('/create', authenticate, orderController.createOrderAndPay);
 
-// ✅ Huỷ đơn hàng theo ID
-router.put('/:id/cancel', orderController.cancelOrder);
+// 🗑️ Huỷ đơn hàng (chỉ khi chưa xác nhận)
+router.patch('/:id/cancel', authenticate, orderController.cancelOrderByUser);
 
-// ✅ Lấy chi tiết đơn hàng theo ID
-router.get('/:id', orderController.getDetailById);
+// 🔄 Mua lại đơn hàng (copy sp vào giỏ hàng mới)
+router.post('/:id/reorder', authenticate, orderController.reorder);
+
+// ⭐ Đánh giá sản phẩm (chỉ sau khi đã giao & thanh toán)
+router.post('/:id/review', authenticate, orderController.reviewProduct);
+
+// 📩 Callback từ MoMo (không cần auth vì MoMo gọi)
+router.post('/momo/callback', orderController.momoCallback);
 
 module.exports = router;

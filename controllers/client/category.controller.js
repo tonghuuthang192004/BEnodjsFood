@@ -1,39 +1,34 @@
-const category = require('../../modal/client/category.model');
-// console.log(category)
-module.exports.index = async (req, res) => {
+const categoryModel = require('../../modal/client/category.model');
+
+// 🟢 Lấy tất cả danh mục
+const getAllCategories = async (req, res) => {
+    try {
+        const data = await categoryModel.getAllCategories();
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('❌ Lỗi lấy danh mục:', error);
+        res.status(500).json({ success: false, message: 'Internal server error.' });
+    }
+};
+
+// 🟢 Lấy sản phẩm theo ID danh mục
+const getProductsByCategory = async (req, res) => {
     try {
         const { id } = req.params;
+        const data = await categoryModel.getProductsByCategoryId(id);
 
-        if (!id) {
-            return res.status(400).json({ error: 'Category ID is required.' });
+        if (data.length === 0) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm cho danh mục này' });
         }
 
-        const data = await category.getCategoryId(id);
-
-        if (!data || data.length === 0) {
-            return res.status(404).json({ error: 'No product found for this category.' });
-        }
-
-        res.json(data);
+        res.json({ success: true, data });
     } catch (error) {
-        console.error('Error fetching product by ID:', error);
-        res.status(500).json({ error: 'Internal server error.' });
+        console.error('❌ Lỗi lấy sản phẩm theo danh mục:', error);
+        res.status(500).json({ success: false, message: 'Internal server error.' });
     }
 };
 
-module.exports.home = async (req, res) => {
-    try {
-      
-        const data = await category.getAllCategory();
-
-        if (!data || data.length === 0) {
-            return res.status(404).json({ error: 'No product found for this category.' });
-        }
-
-        res.json(data);
-    } catch (error) {
-        console.error('Error fetching product by ID:', error);
-        res.status(500).json({ error: 'Internal server error.' });
-    }
+module.exports = {
+    getAllCategories,
+    getProductsByCategory
 };
-

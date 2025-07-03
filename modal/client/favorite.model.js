@@ -11,6 +11,16 @@ exports.getFavoritesByUser = async (userId) => {
   return rows;
 };
 
+// 🔥 Check sản phẩm đã tồn tại trong yêu thích
+exports.isFavorite = async (userId, productId) => {
+  const [rows] = await db.execute(
+    `SELECT 1 FROM san_pham_yeu_thich
+     WHERE id_nguoi_dung = ? AND id_san_pham = ? LIMIT 1`,
+    [userId, productId]
+  );
+  return rows.length > 0;
+};
+
 // ✅ Thêm sản phẩm vào yêu thích
 exports.addFavorite = async (userId, productId) => {
   const [result] = await db.execute(
@@ -31,18 +41,11 @@ exports.deleteFavorite = async (productId, userId) => {
   return result;
 };
 
-
 // 🗑️ Xoá tất cả sản phẩm yêu thích của user
 exports.clearFavoritesByUser = async (userId) => {
-  console.log('🟢 [MODEL] clearFavoritesByUser called with userId:', userId);
-
   const [result] = await db.execute(
     `DELETE FROM san_pham_yeu_thich WHERE id_nguoi_dung = ?`,
     [userId]
   );
-
-  console.log('🟢 [MODEL] DELETE result:', result);
-
   return result;
 };
-

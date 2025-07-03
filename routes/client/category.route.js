@@ -1,7 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const controllerCategory = require('../../controllers/client/category.controller');
+const categoryController = require('../../controllers/client/category.controller');
 
-router.get('/:id', controllerCategory.index);
-router.get('/',controllerCategory.home)
+// 🟢 API lấy tất cả danh mục
+router.get('/', categoryController.getAllCategories);
+
+// 🟢 API lấy sản phẩm theo ID danh mục
+router.get('/:id/products', categoryController.getProductsByCategory);
+
 module.exports = router;

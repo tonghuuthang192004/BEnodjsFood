@@ -14,7 +14,7 @@ const transporter = nodemailer.createTransport({
 const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
 
 const userController = {
-    // Đăng ký
+    // 📝 Đăng ký
     register: async (req, res) => {
         const { email, mat_khau, ten, so_dien_thoai } = req.body;
         console.log('📥 [register] Body:', req.body);
@@ -55,17 +55,19 @@ const userController = {
                        <p>Mã xác minh của bạn là: <b>${verificationCode}</b></p>`
             });
 
-            res.json({ message: 'Đăng ký thành công, vui lòng kiểm tra email để xác minh.' });
+            res.status(201).json({
+                message: 'Đăng ký thành công, vui lòng kiểm tra email để xác minh.'
+            });
         } catch (err) {
             console.error('❌ Lỗi [register]:', err);
             res.status(500).json({ error: err.message });
         }
     },
 
-    // Xác minh email
+    // ✅ Xác minh email
     verifyEmail: async (req, res) => {
-        const { email, ma_xac_minh } = req.query;
-        console.log('📥 [verifyEmail] Query:', req.query);
+        const { email, ma_xac_minh } = req.body;
+        console.log('📥 [verifyEmail] Body:', req.body);
 
         try {
             const user = await User.findByEmail(email);
@@ -85,14 +87,22 @@ const userController = {
             });
 
             console.log('✅ Email đã xác minh:', email);
-            res.json({ message: 'Xác minh email thành công' });
+            const token = jwt.sign({ id: user.id_nguoi_dung }, process.env.JWT_SECRET, {
+                expiresIn: '7d'
+            });
+
+            res.status(200).json({
+                message: 'Xác minh email thành công',
+                token,
+                user
+            });
         } catch (err) {
             console.error('❌ Lỗi [verifyEmail]:', err);
             res.status(500).json({ error: err.message });
         }
     },
 
-    // Đăng nhập
+    // 🔓 Đăng nhập
     login: async (req, res) => {
         const { email, mat_khau } = req.body;
         console.log('📥 [login] Body:', req.body);
@@ -114,16 +124,23 @@ const userController = {
                 return res.status(400).json({ error: 'Sai mật khẩu' });
             }
 
-            const token = jwt.sign({ id: user.id_nguoi_dung }, process.env.JWT_SECRET, { expiresIn: '7d' });
+            const token = jwt.sign({ id: user.id_nguoi_dung }, process.env.JWT_SECRET, {
+                expiresIn: '7d'
+            });
             console.log('✅ Đăng nhập thành công:', email);
-            res.json({ message: 'Đăng nhập thành công', token });
+
+            res.status(200).json({
+                message: 'Đăng nhập thành công',
+                token,
+                user
+            });
         } catch (err) {
             console.error('❌ Lỗi [login]:', err);
             res.status(500).json({ error: err.message });
         }
     },
 
-    // Cập nhật thông tin
+    // 📝 Cập nhật thông tin
     updateProfile: async (req, res) => {
         const userId = req.user.id;
         const { ten, so_dien_thoai, avatar, gioi_tinh, ngay_sinh } = req.body;
@@ -139,7 +156,7 @@ const userController = {
         }
     },
 
-    // Đổi mật khẩu
+    // 🔒 Đổi mật khẩu
     changePassword: async (req, res) => {
         const userId = req.user.id;
         const { oldPassword, newPassword } = req.body;
@@ -163,53 +180,130 @@ const userController = {
         }
     },
 
-    // Quên mật khẩu
-    forgotPassword: async (req, res) => {
-        const { email } = req.body;
-        console.log('📥 [forgotPassword] Email:', email);
+    // POST /quen-mat-khau
+forgotPassword: async (req, res) => {
+    const { email } = req.body;
+    console.log('📥 [forgotPassword] Email:', email);
 
-        try {
-            const user = await User.findByEmail(email);
-            if (!user) {
-                console.log('❌ Email không tồn tại:', email);
-                return res.status(404).json({ error: 'Email không tồn tại' });
-            }
-
-            const token = jwt.sign({ id: user.id_nguoi_dung }, process.env.JWT_SECRET, { expiresIn: '15m' });
-            const resetLink = `http://localhost:3000/reset-password?token=${token}`;
-
-            await transporter.sendMail({
-                from: process.env.EMAIL_USER,
-                to: email,
-                subject: 'Đặt lại mật khẩu',
-                html: `<p>Nhấn vào link để đặt lại mật khẩu: <a href="${resetLink}">${resetLink}</a></p>`
-            });
-
-            console.log('✅ Email đặt lại mật khẩu đã gửi đến:', email);
-            res.json({ message: 'Email đặt lại mật khẩu đã được gửi' });
-        } catch (err) {
-            console.error('❌ Lỗi [forgotPassword]:', err);
-            res.status(500).json({ error: err.message });
+    try {
+        const user = await User.findByEmail(email);
+        if (!user) {
+            console.log('❌ Email không tồn tại:', email);
+            return res.status(404).json({ error: 'Email không tồn tại' });
         }
-    },
 
-    // Đặt lại mật khẩu
-    resetPassword: async (req, res) => {
-        const { token, newPassword } = req.body;
-        console.log('📥 [resetPassword] Body:', req.body);
+        const otpCode = String(Math.floor(100000 + Math.random() * 900000)); // 6 chữ số
+        const otpExpires = Date.now() + 5 * 60 * 1000; // Hết hạn sau 5 phút
 
-        try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            const hashedPassword = await bcrypt.hash(newPassword, 10);
-            await User.update(decoded.id, { mat_khau: hashedPassword });
+        await User.update(user.id_nguoi_dung, {
+            ma_xac_minh: otpCode,
+            otp_expires: otpExpires
+        });
 
-            console.log('✅ Đặt lại mật khẩu thành công cho user ID:', decoded.id);
-            res.json({ message: 'Đặt lại mật khẩu thành công' });
-        } catch (err) {
-            console.error('❌ Lỗi [resetPassword]:', err);
-            res.status(400).json({ error: 'Token không hợp lệ hoặc đã hết hạn' });
-        }
+        await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Mã xác minh đặt lại mật khẩu',
+            html: `
+                <h3>Xin chào ${user.ten || email},</h3>
+                <p>Mã xác minh đặt lại mật khẩu của bạn là:</p>
+                <h2>${otpCode}</h2>
+                <p>Mã có hiệu lực trong 5 phút.</p>`
+        });
+
+        console.log('✅ Mã OTP gửi đến:', email);
+        res.json({ message: 'Mã xác minh đã gửi đến email' });
+    } catch (err) {
+        console.error('❌ Lỗi [forgotPassword]:', err);
+        res.status(500).json({ error: 'Lỗi server khi gửi email' });
     }
+},
+// POST /xac-minh-otp
+verifyOtp: async (req, res) => {
+    const { email, otpCode } = req.body;
+    console.log('📥 [verifyOtp] Body:', req.body);
+
+    try {
+        const user = await User.findByEmail(email);
+        if (!user) {
+            console.log('❌ Email không tồn tại:', email);
+            return res.status(404).json({ error: 'Email không tồn tại' });
+        }
+
+        if (user.ma_xac_minh !== otpCode) {
+            console.log('❌ Sai mã OTP');
+            return res.status(400).json({ error: 'Mã xác minh không đúng' });
+        }
+
+        if (Date.now() > user.otp_expires) {
+            console.log('⏰ Mã OTP đã hết hạn');
+            return res.status(400).json({ error: 'Mã xác minh đã hết hạn' });
+        }
+
+        // Xóa mã sau khi xác minh
+        await User.update(user.id_nguoi_dung, { ma_xac_minh: null, otp_expires: null });
+
+        console.log('✅ Mã OTP xác minh thành công cho user:', email);
+        res.json({ message: 'Xác minh thành công' });
+    } catch (err) {
+        console.error('❌ Lỗi [verifyOtp]:', err);
+        res.status(500).json({ error: 'Lỗi server khi xác minh mã' });
+    }
+},
+
+// POST /reset-mat-khau
+resetPassword: async (req, res) => {
+    const { email, newPassword } = req.body;
+    console.log('📥 [resetPassword] Body:', req.body);
+
+    try {
+        const user = await User.findByEmail(email);
+        if (!user) {
+            console.log('❌ Email không tồn tại:', email);
+            return res.status(404).json({ error: 'Email không tồn tại' });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await User.update(user.id_nguoi_dung, { mat_khau: hashedPassword });
+
+        console.log('✅ Đặt lại mật khẩu thành công cho user:', email);
+        res.json({ message: 'Đặt lại mật khẩu thành công' });
+    } catch (err) {
+        console.error('❌ Lỗi [resetPassword]:', err);
+        res.status(500).json({ error: 'Lỗi server khi đặt lại mật khẩu' });
+    }
+},
+    // 📄 Lấy thông tin user hiện tại
+getCurrentUser: async (req, res) => {
+    try {
+        const userId = req.user.id; // 👈 Lấy từ middleware decode JWT
+        console.log('📥 [getCurrentUser] User ID:', userId);
+
+        const user = await User.findById(userId);
+        if (!user) {
+            console.log('❌ Không tìm thấy user ID:', userId);
+            return res.status(404).json({ success: false, message: 'Người dùng không tồn tại' });
+        }
+
+        console.log('✅ Lấy thông tin user thành công:', user.email);
+        res.json({ success: true, user });
+    } catch (err) {
+        console.error('❌ Lỗi [getCurrentUser]:', err);
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+},
+uploadAvatar: async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const avatarPath = `/uploads/avatars/${req.file.filename}`;
+    await User.update(userId, { avatar: avatarPath });
+    res.json({ success: true, avatarUrl: avatarPath, message: 'Avatar cập nhật thành công' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi upload avatar' });
+  }
+}
+
+    
 };
 
 module.exports = userController;

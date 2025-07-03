@@ -7,6 +7,7 @@ const userRouter = require('./user.route.js');
 const voucherRouter = require('./voucher.route.js');
 const favoriteRouter = require('./favorite.route.js');
 const addressRouter = require('./address.route.js');
+const orderRouter = require('./order.route.js')
 module.exports = (app) => {
   app.use('/', homeRouter);
   app.use('/products', productRouter);
@@ -16,5 +17,5 @@ module.exports = (app) => {
   app.use('/voucher', voucherRouter);
   app.use('/address', addressRouter);
   app.use('/favorite', favoriteRouter);
-  
+  app.use('/order',orderRouter);
 };
