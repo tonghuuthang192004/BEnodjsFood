@@ -1,4 +1,4 @@
-const db = require('../config/database');
+const db = require('../../config/database');
 const md5 = require('md5');
 const jwt = require('jsonwebtoken');
 

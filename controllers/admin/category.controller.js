@@ -1,4 +1,4 @@
-const category =require('../../modal/categoryMedal')
+const category =require('../../modal/admin/categoryMedal')
 // module.exports.index = async(req, res) =>{
 //  try {
 

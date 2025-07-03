@@ -1,5 +1,5 @@
 // them database 
-const db=require('../config/database');
+const db = require('../../config/database');
 
 const categoryAll = async ()=>{
         const sql =`Select *From danh_muc`;
@@ -21,7 +21,7 @@ const categoryAlls = async (filters) => {
      params.push(`%${filters.search.toLowerCase()}%`);
    }
 
-   // Thêm phần limit và offset nếu có
+ 
    if (filters.limit && filters.limit > 0) {
      sql += ` ORDER BY id_danh_muc ASC LIMIT ?`;
      params.push(parseInt(filters.limit));
@@ -36,7 +36,6 @@ const categoryAlls = async (filters) => {
  };
 
 const updateCategoryStatus = async (id, newStatus) => {
-  // Cập nhật trạng thái danh mục, không phải sản phẩm
   const sql = 'UPDATE danh_muc SET trang_thai = ? WHERE id_danh_muc = ?';
   const [result] = await db.query(sql, [newStatus, id]);
   return result;
@@ -49,11 +48,9 @@ const updateCategoryStatusMulti = async (ids, newStatus) => {
     throw new Error('Trạng thái không hợp lệ');
   }
 
-  // Kiểm tra ids có phải là mảng số hoặc chuỗi hợp lệ không
-  console.log('Updating IDs:', ids);
-  console.log('New Status:', newStatus);
+  // console.log('Updating IDs:', ids);
+  // console.log('New Status:', newStatus);
 
-  // Chuyển ids thành mảng dấu hỏi "?" để chèn vào câu lệnh SQL
   const placeholders = ids.map(() => '?').join(', ');
   const sql = `UPDATE danh_muc SET trang_thai = ? WHERE id_danh_muc IN (${placeholders})`;
 

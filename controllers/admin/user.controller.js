@@ -1,4 +1,4 @@
-const user = require('../../modal/user.Medal');
+const user = require('../../modal/admin/user.Medal');
 console.log(user);
 // Lấy danh sách người dùng
 module.exports.index = async (req, res) => {

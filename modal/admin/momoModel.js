@@ -1,5 +1,5 @@
 // orderModel.js
-const db = require('../config/database'); // import kết nối db của bạn
+const db = require('../../config/database');
 
 module.exports = {
   findOrderByMomoOrderId: async (momoOrderId) => {

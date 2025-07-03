@@ -1,4 +1,4 @@
-const db = require('../config/database');
+const db = require('../../config/database');
 
 const GetAllDisCountManger = async (filters = {}) => {
     let sql = `SELECT * FROM giam_gia WHERE 1=1 `;

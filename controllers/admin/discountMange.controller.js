@@ -1,4 +1,4 @@
-const disCountMangeModel = require('../../modal/discountManger.Medal');
+const disCountMangeModel = require('../../modal/admin/discountManger.Medal');
 const DisCount=require('../../helper/createDiscountMangerRamDom')
 module.exports.index = async (req, res) => {
     const page = parseInt(req.query.page) || 1;

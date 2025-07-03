@@ -1,4 +1,4 @@
-const db=require('../config/database');
+const db = require('../../config/database');
 const createOrder = async (orderData) => {
   try {
     await db.query('START TRANSACTION');

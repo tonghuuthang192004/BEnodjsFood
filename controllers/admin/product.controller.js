@@ -1,5 +1,5 @@
   // Get /admin/products
-  const product=require('../../modal/productModal');
+  const product=require('../../modal/admin/productModal');
   // console.log(product);
   module.exports.index = async (req, res) => {
     

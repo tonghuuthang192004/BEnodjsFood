@@ -1,4 +1,4 @@
-const product =require('../modal/productModal')
+const product =require('../modal/admin/productModal')
 module.exports.creatPost =(req,res,next)=>{
  const { ten, id_danh_muc, gia, mo_ta, trang_thai } = req.body;
     const file = req.file;

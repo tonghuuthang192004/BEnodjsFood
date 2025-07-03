@@ -1,5 +1,5 @@
 
-const orderModel=require('../../modal/orderMedal');
+const orderModel=require('../../modal/admin/orderMedal');
 const secretKey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz'; // đổi theo bạn
 const accessKey = 'F8BBA842ECF85'; // đổi theo bạn
 const crypto = require('crypto');
@@ -120,7 +120,7 @@ module.exports.createOrderAndPay = async (req, res) => {
       const orderInfo = `Thanh toán đơn hàng #${orderId}`;
       const redirectUrl = 'https://webhook.site/b3088a6a-2d17-4f8d-a383-71389a6c600b';
 
-  var ipnUrl = 'https://31c7-2402-800-63ac-9375-1078-6f06-df9a-16d3.ngrok-free.app/admin/cod/callback';
+  var ipnUrl = 'https://1637-115-79-202-156.ngrok-free.app/admin/cod/callback';
       // const momoOrderId = 'MOMO_' + Date.now(); // orderId gửi MoMo
       const requestId = 'REQ_' + Date.now();
       const extraData = '';

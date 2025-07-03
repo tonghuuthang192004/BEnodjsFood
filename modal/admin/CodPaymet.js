@@ -1,5 +1,5 @@
-const db=require('../config/database')
-const {orderDetail}=require('../modal/orderMedal');
+const db = require('../../config/database');
+const {orderDetail}=require('../../modal/admin/orderMedal');
 const payOrderCOD = async (orderId) => {
   try {
     // 1. Kiểm tra đơn hàng tồn tại

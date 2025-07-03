@@ -1,4 +1,4 @@
-const auth = require('../../modal/auth.Medal'); // <-- đường dẫn đúng tới model
+const auth = require('../../modal/admin/auth.Medal'); // <-- đường dẫn đúng tới model
 
 module.exports.LoginPost = async (req, res) => {
   const { email, mat_khau } = req.body;
