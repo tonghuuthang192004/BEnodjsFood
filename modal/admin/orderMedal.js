@@ -67,36 +67,81 @@ const createOrder = async (orderData) => {
     throw err;
   }
 };
+const getOrder = async (filters = {}) => {
+  let sql = `
+    SELECT SQL_CALC_FOUND_ROWS
+      dh.id_don_hang,
+      dh.id_nguoi_dung,
+      nd.ten AS ten_nguoi_dung,
+      dh.ngay_tao,
+      dh.trang_thai,
+      dh.phuong_thuc_thanh_toan,
+      dh.trang_thai_thanh_toan,
+      dh.tong_gia,
+      dh.ghi_chu,
+      dc.dia_chi_day_du
+    FROM don_hang dh
+    JOIN nguoi_dung nd ON dh.id_nguoi_dung = nd.id_nguoi_dung
+    LEFT JOIN dia_chi dc ON dh.id_dia_chi = dc.id
+    WHERE 1
+  `;
 
+  const params = [];
 
-const getOrder =  async (status)=>{
-    let sql=`SELECT
-                dh.id_don_hang,
-                dh.id_nguoi_dung,
-                nd.ten AS ten_nguoi_dung,
-                dh.ngay_tao,
-                dh.trang_thai,
-                dh.phuong_thuc_thanh_toan,
-                dh.trang_thai_thanh_toan,
-                dh.tong_gia,
-                dh.ghi_chu,
-                dc.dia_chi_day_du
-            FROM
-                don_hang dh
-            JOIN
-                nguoi_dung nd ON dh.id_nguoi_dung = nd.id_nguoi_dung
-            LEFT JOIN
-                dia_chi dc ON dh.id_dia_chi = dc.id`;
-    const params=[];
-    if(status)
-    {
-        sql+= ` WHERE dh.trang_thai = ? `;
-        params.push(status);
-    }
-    sql+= ` ORDER BY dh.ngay_tao DESC `;
-    const [rows]=await db.query(sql,params)
-    return rows;
-}
+  if (filters.status) {
+    sql += ` AND dh.trang_thai = ?`;
+    params.push(filters.status);
+  }
+
+  if (filters.search) {
+    sql += ` AND LOWER(dh.phuong_thuc_thanh_toan) LIKE ?`;
+    params.push(`%${filters.search.toLowerCase()}%`);
+  }
+
+  sql += ` ORDER BY dh.ngay_tao DESC`;
+
+  if (filters.limit !== undefined && filters.offset !== undefined) {
+    sql += ` LIMIT ? OFFSET ?`;
+    params.push(filters.limit, filters.offset);
+  }
+
+  console.log('SQL:', sql);
+  console.log('Params:', params);
+
+  const [rows] = await db.query(sql, params);
+  const [[{ total }]] = await db.query('SELECT FOUND_ROWS() AS total');
+
+  return { orders: rows, total };
+};
+
+// const getOrder =  async (status)=>{
+//     let sql=`SELECT
+//                 dh.id_don_hang,
+//                 dh.id_nguoi_dung,
+//                 nd.ten AS ten_nguoi_dung,
+//                 dh.ngay_tao,
+//                 dh.trang_thai,
+//                 dh.phuong_thuc_thanh_toan,
+//                 dh.trang_thai_thanh_toan,
+//                 dh.tong_gia,
+//                 dh.ghi_chu,
+//                 dc.dia_chi_day_du
+//             FROM
+//                 don_hang dh
+//             JOIN
+//                 nguoi_dung nd ON dh.id_nguoi_dung = nd.id_nguoi_dung
+//             LEFT JOIN
+//                 dia_chi dc ON dh.id_dia_chi = dc.id`;
+//     const params=[];
+//     if(status)
+//     {
+//         sql+= ` WHERE dh.trang_thai = ? `;
+//         params.push(status);
+//     }
+//     sql+= ` ORDER BY dh.ngay_tao DESC `;
+//     const [rows]=await db.query(sql,params)
+//     return rows;
+// }
 
 
 const orderDetail = async(orderId)=>{

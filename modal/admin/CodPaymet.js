@@ -7,8 +7,8 @@ const payOrderCOD = async (orderId) => {
       'SELECT * FROM don_hang WHERE id_don_hang = ?',
       [orderId]
     );
-    console.log('Kết quả truy vấn:', rows);
-    console.log('orderId nhận được là:', orderId);
+    // console.log('Kết quả truy vấn:', rows);
+    // console.log('orderId nhận được là:', orderId);
 
 
     if (rows.length === 0) throw new Error('Không tìm thấy đơn hàng');

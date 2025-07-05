@@ -9,13 +9,30 @@ const moment = require('moment');
 const db=require('../../config/database');
 
 
-module.exports.getOrder= async (req,res)=>{
-    const {status}=req.query
-    const data=await orderModel.getOrder(status);
-    res.json(data);
-    
+module.exports.getOrder = async (req, res) => {
+  try {
+     const page = req.query.page ? parseInt(req.query.page) : undefined;
+    const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
+    const offset = page && limit ? (page - 1) * limit : undefined;
+    // const page = parseInt(req.query.page) || 1;
+    // const limit = parseInt(req.query.limit) || 10;
+    // const offset = (page - 1) * limit;
 
-}
+    const filters = {
+      status: req.query.status || undefined,
+      search: req.query.search || undefined,
+      deleted: 0,
+      limit,
+      offset
+    };
+
+    const data = await orderModel.getOrder(filters);
+    res.json(data);
+  } catch (error) {
+    console.error("Lỗi đơn hàng:", error);
+    res.status(500).json({ error: 'Lỗi server khi lấy đơn hàng' });
+  }
+};
 module.exports.detailOrder=async (req,res)=>{
       try {
         const { id} = req.params;
@@ -189,7 +206,7 @@ orderData.tong_gia = tong_gia_truoc_giam - gia_tri_giam;
       const orderInfo = `Thanh toán đơn hàng #${orderId}`;
       const redirectUrl = 'https://webhook.site/b3088a6a-2d17-4f8d-a383-71389a6c600b';
 
-  var ipnUrl = 'https://1637-115-79-202-156.ngrok-free.app/admin/cod/callback';
+  var ipnUrl = 'https://a075-2402-800-63ac-8971-7828-7380-b173-e3b2.ngrok-free.app/admin/cod/callback';
       // const momoOrderId = 'MOMO_' + Date.now(); // orderId gửi MoMo
       const requestId = 'REQ_' + Date.now();
       const extraData = '';
