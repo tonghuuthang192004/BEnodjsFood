@@ -1,20 +1,21 @@
 const express = require('express');
 const router = express.Router();
 const addressController = require('../../controllers/client/address.controller');
+const { authenticate } = require('../../helper/middleware');
 
-// 📥 Lấy danh sách địa chỉ của user
-router.get('/:userId', addressController.getAllAddresses);
+// 📥 Lấy danh sách địa chỉ
+router.get('/', authenticate, addressController.getAllAddresses);
 
-// ➕ Thêm địa chỉ mới
-router.post('/', addressController.addAddress);
+// ➕ Thêm địa chỉ
+router.post('/', authenticate, addressController.addAddress);
 
 // ✏️ Cập nhật địa chỉ
-router.put('/:id', addressController.updateAddress);
+router.put('/:id', authenticate, addressController.updateAddress);
 
 // 🗑️ Xoá địa chỉ
-router.delete('/:id', addressController.deleteAddress);
+router.delete('/:id', authenticate, addressController.deleteAddress);
 
-// 🌟 Đặt địa chỉ mặc định
-router.patch('/default/:id', addressController.setDefaultAddress);
+// ✅ Đặt địa chỉ mặc định
+router.patch('/default/:id', authenticate, addressController.setDefaultAddress);
 
 module.exports = router;

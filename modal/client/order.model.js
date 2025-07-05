@@ -5,27 +5,46 @@ const createOrder = async (orderData) => {
   try {
     await db.query('START TRANSACTION');
 
+    // 1. Insert đơn hàng (đã có giảm giá nếu có)
     const insertQuery = `
       INSERT INTO don_hang (
-        id_nguoi_dung, id_dia_chi, phuong_thuc_thanh_toan,
-        trang_thai, trang_thai_thanh_toan, tong_gia, ghi_chu, ngay_tao
-      ) VALUES (?, ?, ?, 'Chưa xác nhận', 'Chưa thanh toán', ?, ?, NOW())
+        id_nguoi_dung,
+        id_dia_chi,
+        phuong_thuc_thanh_toan,
+        trang_thai,
+        trang_thai_thanh_toan,
+        tong_gia,
+        tong_gia_truoc_giam,
+        gia_tri_giam,
+        id_giam_gia,
+        ghi_chu,
+        ngay_tao
+      ) VALUES (?, ?, ?, 'Chưa xác nhận', 'Chưa thanh toán', ?, ?, ?, ?, ?, NOW())
     `;
-    const [result] = await db.query(insertQuery, [
-      orderData.user_id,
+
+    const insertValues = [
+      orderData.id_nguoi_dung,
       orderData.id_dia_chi,
       orderData.phuong_thuc_thanh_toan,
       orderData.tong_gia,
-      orderData.ghi_chu || null
-    ]);
-    const orderId = result.insertId;
+      orderData.tong_gia_truoc_giam || null,
+      orderData.gia_tri_giam || 0,
+      orderData.id_giam_gia || null,
+      orderData.ghi_chu || null,
+    ];
 
+    const [result] = await db.query(insertQuery, insertValues);
+
+    const orderId = result.insertId;
     const momo_order_id = `MOMO_${Date.now()}_${orderId}`;
+
+    // 2. Update momo_order_id
     await db.query(
       `UPDATE don_hang SET momo_order_id = ? WHERE id_don_hang = ?`,
       [momo_order_id, orderId]
     );
 
+    // 3. Insert chi tiết đơn hàng
     for (const item of orderData.chi_tiet_san_pham) {
       await db.query(
         `INSERT INTO chi_tiet_don_hang (id_don_hang, id_san_pham, so_luong, ghi_chu)
@@ -34,6 +53,7 @@ const createOrder = async (orderData) => {
       );
     }
 
+    // 4. Ghi lịch sử
     await db.query(
       `INSERT INTO lich_su_don_hang (id_don_hang, thoi_gian, trang_thai, mo_ta)
        VALUES (?, NOW(), 'Chưa xác nhận', 'Tạo đơn hàng mới')`,
@@ -42,12 +62,13 @@ const createOrder = async (orderData) => {
 
     await db.query('COMMIT');
     return { orderId, momo_order_id };
+
   } catch (err) {
     await db.query('ROLLBACK');
+    console.error('❌ Lỗi tạo đơn hàng:', err.message);
     throw err;
   }
 };
-
 // 📥 Lấy danh sách đơn hàng của user (có lọc trạng thái)
 const getOrdersByUserId = async (userId, status) => {
   let sql = `

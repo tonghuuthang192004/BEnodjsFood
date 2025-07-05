@@ -5,7 +5,7 @@ const voucherController = require('../../controllers/client/voucher.controller')
 // 📌 1️⃣ Lấy danh sách voucher đang hoạt động
 router.get('/', voucherController.getActiveVouchers);
 
-// 📌 2️⃣ Người dùng lưu voucher
+// 📌 2️⃣ Lưu voucher
 router.post('/save', voucherController.saveVoucher);
 
 // 📌 3️⃣ Lấy danh sách voucher đã lưu

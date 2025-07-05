@@ -6,6 +6,8 @@ const pool = mysql.createPool({
   user: 'root',
   password: '',
   database: process.env.DATABASE, // nhớ chắc chắn biến này đã set!
+  timezone: '+07:00', // ✅ Đồng bộ timezone
+  dateStrings: true,  // ✅ Tránh trả về Date thành Buffer
 });
 
 console.log('✅ Kết nối MySQL thành công!');

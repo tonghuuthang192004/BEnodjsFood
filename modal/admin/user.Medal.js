@@ -149,9 +149,6 @@ module.exports = {
   updateUserStatusMulti,
   deleteItem,
   deleteAll,
-
-
-  
   createUser,
   updateUser,
   getAllUserId

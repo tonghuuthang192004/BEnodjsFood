@@ -22,6 +22,6 @@ router.post('/:id/reorder', authenticate, orderController.reorder);
 router.post('/:id/review', authenticate, orderController.reviewProduct);
 
 // 📩 Callback từ MoMo (không cần auth vì MoMo gọi)
-router.post('/momo/callback', orderController.momoCallback);
+router.post('/momo/callback', orderController.callback);
 
 module.exports = router;
