@@ -79,7 +79,8 @@ const getOrder = async (filters = {}) => {
       dh.trang_thai_thanh_toan,
       dh.tong_gia,
       dh.ghi_chu,
-      dc.dia_chi_day_du
+      dc.dia_chi_day_du,
+      nd.so_dien_thoai
     FROM don_hang dh
     JOIN nguoi_dung nd ON dh.id_nguoi_dung = nd.id_nguoi_dung
     LEFT JOIN dia_chi dc ON dh.id_dia_chi = dc.id
@@ -93,9 +94,10 @@ const getOrder = async (filters = {}) => {
     params.push(filters.status);
   }
 
-  if (filters.search) {
-    sql += ` AND LOWER(dh.phuong_thuc_thanh_toan) LIKE ?`;
-    params.push(`%${filters.search.toLowerCase()}%`);
+ if (filters.search !== undefined) {
+   const keyword = `%${filters.search.toLowerCase()}%`;
+  sql += ' AND (LOWER(ten) LIKE ? OR so_dien_thoai LIKE ?)';
+  params.push(keyword, filters.search); // 1 cho ten, 1 cho sdt
   }
 
   sql += ` ORDER BY dh.ngay_tao DESC`;

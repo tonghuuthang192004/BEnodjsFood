@@ -1,37 +1,38 @@
 const db = require('../../config/database');
 
-const getCategoryId = async (id_danh_muc) => {
+// 🟢 Lấy tất cả danh mục
+const getAllCategories = async () => {
     try {
         const sql = `
-            SELECT san_pham.ten, san_pham.hinh_anh, san_pham.mo_ta, san_pham.gia
+            SELECT id_danh_muc, ten, tieu_de, hinh_anh
             FROM danh_muc
-            INNER JOIN san_pham ON danh_muc.id_danh_muc = san_pham.id_danh_muc
-            WHERE danh_muc.id_danh_muc = ?
+            WHERE trang_thai = 1
         `;
-        const [rel] = await db.query(sql, [id_danh_muc]);
-        return rel;
+        const [rows] = await db.query(sql);
+        return rows;
     } catch (error) {
-        console.error('Lỗi khi lấy danh mục:', error);
-        throw error; // ❗ KHÔNG dùng res ở đây vì model không có res
+        console.error('❌ Lỗi khi lấy tất cả danh mục:', error);
+        throw error;
     }
 };
 
-const getAllCategory = async () => {
+// 🟢 Lấy sản phẩm theo ID danh mục
+const getProductsByCategoryId = async (id_danh_muc) => {
     try {
         const sql = `
-           SELECT *FROM danh_muc
+            SELECT id_san_pham, ten, gia, mo_ta, hinh_anh, noi_bat
+            FROM san_pham
+            WHERE id_danh_muc = ? AND trang_thai = 1
         `;
-        const [rel] = await db.query(sql);
-        return rel;
+        const [rows] = await db.query(sql, [id_danh_muc]);
+        return rows;
     } catch (error) {
-        console.error('Lỗi khi lấy danh mục:', error);
-        throw error; // ❗ KHÔNG dùng res ở đây vì model không có res
+        console.error('❌ Lỗi khi lấy sản phẩm theo danh mục:', error);
+        throw error;
     }
 };
-
-
 
 module.exports = {
-    getCategoryId,
-    getAllCategory
+    getAllCategories,
+    getProductsByCategoryId
 };

@@ -1,79 +1,167 @@
-// controllers/client/cart.controller.js
 const cartModel = require('../../modal/client/cart.model');
 
-module.exports.getUserCart = async (req, res) => {
+// 📦 Lấy giỏ hàng của user
+exports.getUserCart = async (req, res) => {
   try {
-    const userId = req.user.id;  // Lấy userId từ request (đã xác thực từ token)
-    console.log("User ID: ", userId);  // Log userId để chắc chắn rằng bạn có giá trị đúng
-
+    const userId = req.user.id;
     const cart = await cartModel.getCartUserID(userId);
-    console.log(cart)
-    res.json(cart);
-  } catch (error) {
-    res.status(500).json({ message: 'Lỗi khi lấy giỏ hàng', error });
-  }
-};
 
-module.exports.createCart = async (req, res) => {
-  try {
-    const userId = req.user.id;  // Lấy userId từ request (đã xác thực từ token)
-    console.log(userId)
-    const result = await cartModel.createCart(userId);
-    res.json({ message: 'Tạo giỏ hàng thành công', result });
-  } catch (error) {
-    res.status(500).json({ message: 'Lỗi khi tạo giỏ hàng', error });
-  }
-};
-
-module.exports.getCartItems = async (req, res) => {
-  try {
-    const userId = req.user.id;  // Lấy userId từ request (đã xác thực từ token)
-    console.log(userId)
-    const cart = await cartModel.getCartUserID(userId);
-    if (!cart || cart.length === 0) {
-      return res.status(404).json({ message: 'Không tìm thấy giỏ hàng' });
+    if (!cart) {
+      return res.status(200).json({ success: true, data: [], message: "Giỏ hàng trống" });
     }
 
-    const cartId = cart.id_gio_hang;
-    const items = await cartModel.getCartItem(cartId);
-    res.json(items);
+    const items = await cartModel.getCartItem(cart.id_gio_hang);
+    res.status(200).json({ success: true, data: items });
   } catch (error) {
-    console.error('Lỗi getCartItems:', error);
-    res.status(500).json({ message: 'Lỗi khi lấy sản phẩm giỏ hàng', error });
+    console.error('❌ [getUserCart] Error:', error.message);
+    res.status(500).json({ success: false, message: "Lỗi server khi lấy giỏ hàng" });
   }
 };
 
-module.exports.updateItemQuantity = async (req, res) => {
+// ➕ Thêm sản phẩm vào giỏ
+exports.addItemToCart = async (req, res) => {
   try {
-    const { itemId, quantity } = req.body;
+    const userId = req.user.id;
+    const { id_san_pham, so_luong } = req.body;
 
-    if (!itemId || quantity == null) {
-      return res.status(400).json({ message: 'Thiếu itemId hoặc quantity' });
+    if (!id_san_pham || !so_luong) {
+      return res.status(400).json({ success: false, message: "Thiếu id_san_pham hoặc so_luong" });
     }
 
-    const userId = req.user.id;  // Lấy userId từ request (đã xác thực từ token)
+    let cart = await cartModel.getCartUserID(userId);
+    if (!cart) {
+      cart = await cartModel.createCart(userId);
+    }
 
-    await cartModel.updateCartItemQuantity(itemId, quantity, userId);
+    const result = await cartModel.addItemToCart(cart.id_gio_hang, id_san_pham, so_luong);
 
-    res.json({ message: 'Cập nhật số lượng sản phẩm thành công' });
+    let message;
+    if (result.type === 'insert') {
+      message = "Đã thêm sản phẩm vào giỏ";
+    } else if (result.type === 'update') {
+      message = "Đã cập nhật số lượng sản phẩm";
+    } else if (result.type === 'restore') {
+      message = "Đã khôi phục và thêm lại sản phẩm vào giỏ";
+    }
+
+    res.status(result.type === 'insert' ? 201 : 200).json({
+      success: true,
+      message,
+      quantity: result.quantity
+    });
   } catch (error) {
-    console.error('Lỗi khi cập nhật số lượng sản phẩm:', error);
-    res.status(500).json({ message: 'Lỗi khi cập nhật số lượng sản phẩm', error: error.message || error });
+    console.error('❌ [addItemToCart] Error:', error.message);
+    res.status(500).json({ success: false, message: "Lỗi server khi thêm sản phẩm vào giỏ" });
   }
 };
 
-module.exports.deleteItem = async (req, res) => {
+// 🔄 Cập nhật số lượng sản phẩm
+exports.updateItemQuantity = async (req, res) => {
   try {
-    const { productId } = req.body;
+    const userId = req.user.id;
+    const id_san_pham = req.params.id_san_pham;
+    const so_luong = req.body.so_luong;
 
-    const userId = req.user.id;  // Lấy userId từ request (đã xác thực từ token)
-    
+    if (!id_san_pham || so_luong === undefined) {
+      return res.status(400).json({ success: false, message: "Thiếu id_san_pham hoặc so_luong" });
+    }
+
     const cart = await cartModel.getCartUserID(userId);
-    const cartId = cart.id_gio_hang;
+    if (!cart) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy giỏ hàng" });
+    }
 
-    await cartModel.deleteItem(cartId, productId);
-    res.json({ message: 'Xóa sản phẩm khỏi giỏ thành công' });
+    const result = await cartModel.updateCartItemQuantity(cart.id_gio_hang, id_san_pham, so_luong);
+
+    res.status(200).json({
+      success: true,
+      message: result.added
+        ? "Đã thêm mới sản phẩm vào giỏ vì trước đó không tồn tại hoặc đã bị xoá"
+        : "Cập nhật số lượng thành công"
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi khi xóa sản phẩm', error });
+    console.error('❌ [updateItemQuantity] Error:', error.message);
+    res.status(500).json({ success: false, message: "Lỗi server khi cập nhật số lượng" });
+  }
+};
+
+// ❌ Xoá 1 sản phẩm khỏi giỏ (soft-delete)
+exports.deleteItem = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const id_san_pham = req.params.id_san_pham;
+
+    if (!id_san_pham) {
+      return res.status(400).json({ success: false, message: "Thiếu id_san_pham" });
+    }
+
+    const cart = await cartModel.getCartUserID(userId);
+    if (!cart) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy giỏ hàng" });
+    }
+
+    const result = await cartModel.deleteItem(cart.id_gio_hang, id_san_pham);
+
+    if (result.affectedRows > 0) {
+      res.status(200).json({ success: true, message: "Đã xoá sản phẩm (soft-delete)" });
+    } else {
+      res.status(404).json({ success: false, message: "Sản phẩm không tồn tại trong giỏ" });
+    }
+  } catch (error) {
+    console.error('❌ [deleteItem] Error:', error.message);
+    res.status(500).json({ success: false, message: "Lỗi server khi xoá sản phẩm" });
+  }
+};
+
+// 🧹 Xoá toàn bộ giỏ hàng (soft-delete)
+exports.clearCart = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const cart = await cartModel.getCartUserID(userId);
+
+    if (!cart) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy giỏ hàng" });
+    }
+
+    const result = await cartModel.clearCart(cart.id_gio_hang);
+
+    res.status(200).json({
+      success: true,
+      message: result.affectedRows > 0
+        ? "Đã xoá toàn bộ giỏ hàng (soft-delete)"
+        : "Giỏ hàng đã trống"
+    });
+  } catch (error) {
+    console.error('❌ [clearCart] Error:', error.message);
+    res.status(500).json({ success: false, message: "Lỗi server khi xoá giỏ hàng" });
+  }
+};
+
+// ♻️ Khôi phục 1 sản phẩm đã xoá
+exports.restoreItem = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const id_san_pham = req.params.id_san_pham;
+    const so_luong = req.body.so_luong || 1; // mặc định 1 nếu không truyền
+
+    if (!id_san_pham) {
+      return res.status(400).json({ success: false, message: "Thiếu id_san_pham" });
+    }
+
+    const cart = await cartModel.getCartUserID(userId);
+    if (!cart) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy giỏ hàng" });
+    }
+
+    const result = await cartModel.restoreCartItem(cart.id_gio_hang, id_san_pham, so_luong);
+
+    if (result.affectedRows > 0) {
+      res.status(200).json({ success: true, message: "Đã khôi phục sản phẩm vào giỏ" });
+    } else {
+      res.status(404).json({ success: false, message: "Sản phẩm không tồn tại để khôi phục" });
+    }
+  } catch (error) {
+    console.error('❌ [restoreItem] Error:', error.message);
+    res.status(500).json({ success: false, message: "Lỗi server khi khôi phục sản phẩm" });
   }
 };
