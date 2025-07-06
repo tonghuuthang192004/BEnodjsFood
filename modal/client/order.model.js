@@ -5,7 +5,7 @@ const createOrder = async (orderData) => {
   try {
     await db.query('START TRANSACTION');
 
-    // 1. Insert đơn hàng (đã có giảm giá nếu có)
+    // 1️⃣ Insert đơn hàng
     const insertQuery = `
       INSERT INTO don_hang (
         id_nguoi_dung,
@@ -21,7 +21,6 @@ const createOrder = async (orderData) => {
         ngay_tao
       ) VALUES (?, ?, ?, 'Chưa xác nhận', 'Chưa thanh toán', ?, ?, ?, ?, ?, NOW())
     `;
-
     const insertValues = [
       orderData.id_nguoi_dung,
       orderData.id_dia_chi,
@@ -32,33 +31,51 @@ const createOrder = async (orderData) => {
       orderData.id_giam_gia || null,
       orderData.ghi_chu || null,
     ];
-
     const [result] = await db.query(insertQuery, insertValues);
-
     const orderId = result.insertId;
-    const momo_order_id = `MOMO_${Date.now()}_${orderId}`;
 
-    // 2. Update momo_order_id
+    // 2️⃣ Update momo_order_id
+    const momo_order_id = `MOMO_${Date.now()}_${orderId}`;
     await db.query(
       `UPDATE don_hang SET momo_order_id = ? WHERE id_don_hang = ?`,
       [momo_order_id, orderId]
     );
 
-    // 3. Insert chi tiết đơn hàng
-    for (const item of orderData.chi_tiet_san_pham) {
+    // 3️⃣ Lấy sản phẩm từ giỏ hàng
+    const [cartItems] = await db.query(`
+      SELECT gct.id_san_pham, gct.so_luong
+      FROM gio_hang_chi_tiet gct
+      JOIN gio_hang gh ON gct.id_gio_hang = gh.id_gio_hang
+      WHERE gh.id_nguoi_dung = ?
+    `, [orderData.id_nguoi_dung]);
+
+    if (cartItems.length === 0) {
+      throw new Error('Giỏ hàng trống. Không thể tạo đơn hàng.');
+    }
+
+    // 4️⃣ Insert chi tiết đơn hàng
+    for (const item of cartItems) {
       await db.query(
-        `INSERT INTO chi_tiet_don_hang (id_don_hang, id_san_pham, so_luong, ghi_chu)
-         VALUES (?, ?, ?, ?)`,
-        [orderId, item.id_san_pham, item.so_luong, item.ghi_chu || null]
+        `INSERT INTO chi_tiet_don_hang (id_don_hang, id_san_pham, so_luong)
+         VALUES (?, ?, ?)`,
+        [orderId, item.id_san_pham, item.so_luong]
       );
     }
 
-    // 4. Ghi lịch sử
+    // 5️⃣ Ghi lịch sử đơn hàng
     await db.query(
       `INSERT INTO lich_su_don_hang (id_don_hang, thoi_gian, trang_thai, mo_ta)
        VALUES (?, NOW(), 'Chưa xác nhận', 'Tạo đơn hàng mới')`,
       [orderId]
     );
+
+    // 6️⃣ Xóa giỏ hàng của user
+    await db.query(`
+      DELETE gct
+      FROM gio_hang_chi_tiet gct
+      JOIN gio_hang gh ON gct.id_gio_hang = gh.id_gio_hang
+      WHERE gh.id_nguoi_dung = ?
+    `, [orderData.id_nguoi_dung]);
 
     await db.query('COMMIT');
     return { orderId, momo_order_id };
@@ -69,7 +86,8 @@ const createOrder = async (orderData) => {
     throw err;
   }
 };
-// 📥 Lấy danh sách đơn hàng của user (có lọc trạng thái)
+
+// 📥 Lấy danh sách đơn hàng theo user
 const getOrdersByUserId = async (userId, status) => {
   let sql = `
     SELECT id_don_hang, ngay_tao, trang_thai, tong_gia,
@@ -89,37 +107,55 @@ const getOrdersByUserId = async (userId, status) => {
   return rows;
 };
 
-// 📥 Lấy chi tiết đơn hàng
-const getOrderDetailByUser = async (orderId, userId) => {
-  const [orders] = await db.query(`
-    SELECT dh.*, dc.dia_chi_day_du
-    FROM don_hang dh
-    LEFT JOIN dia_chi dc ON dh.id_dia_chi = dc.id
-    WHERE dh.id_don_hang = ? AND dh.id_nguoi_dung = ?
+// 📥 Lấy chi tiết danh sách sản phẩm trong đơn hàng của user
+const getOrderProductsByUser = async (orderId, userId) => {
+  const [items] = await db.query(`
+    SELECT 
+      ctdh.id_san_pham,
+      sp.ten AS productName,
+      sp.hinh_anh AS imageUrl,
+      sp.gia AS price,
+      ctdh.so_luong AS quantity,
+      (sp.gia * ctdh.so_luong) AS total
+    FROM chi_tiet_don_hang ctdh
+    INNER JOIN san_pham sp ON ctdh.id_san_pham = sp.id_san_pham
+    INNER JOIN don_hang dh ON ctdh.id_don_hang = dh.id_don_hang
+    WHERE ctdh.id_don_hang = ? 
+      AND dh.id_nguoi_dung = ?
+      AND sp.deleted = 0          
+      AND sp.trang_thai = 1       
+    ORDER BY ctdh.id_san_pham
   `, [orderId, userId]);
 
-  if (orders.length === 0) return null;
-  const order = orders[0];
-
-  const [items] = await db.query(`
-    SELECT ctdh.id_san_pham, sp.ten AS ten_san_pham, sp.gia, ctdh.so_luong, ctdh.ghi_chu
-    FROM chi_tiet_don_hang ctdh
-    JOIN san_pham sp ON ctdh.id_san_pham = sp.id_san_pham
-    WHERE ctdh.id_don_hang = ?
-  `, [orderId]);
-  order.chi_tiet_san_pham = items;
-
-  const [history] = await db.query(`
-    SELECT thoi_gian, trang_thai, mo_ta
-    FROM lich_su_don_hang
-    WHERE id_don_hang = ? ORDER BY thoi_gian ASC
-  `, [orderId]);
-  order.lich_su_trang_thai = history;
-
-  return order;
+  return items;
 };
 
-// 🗑️ Huỷ đơn hàng
+
+
+const getOrderHistoriesByUser = async (userId, status) => {
+  let sql = `
+    SELECT lsdh.id_don_hang, lsdh.thoi_gian, lsdh.trang_thai, lsdh.mo_ta,
+           dh.tong_gia, dh.phuong_thuc_thanh_toan
+    FROM lich_su_don_hang lsdh
+    JOIN don_hang dh ON lsdh.id_don_hang = dh.id_don_hang
+    WHERE dh.id_nguoi_dung = ?
+  `;
+  const params = [userId];
+
+  // 👉 Chỉ lọc nếu status khác 'Tất cả' và không null
+  if (status && status !== 'Tất cả') {
+    sql += ' AND lsdh.trang_thai = ?';
+    params.push(status);
+  }
+
+  sql += ' ORDER BY lsdh.thoi_gian DESC';
+
+  const [rows] = await db.query(sql, params);
+  return rows;
+};
+
+
+
 const cancelOrderByUser = async (orderId, userId) => {
   const [result] = await db.query(`
     UPDATE don_hang
@@ -137,30 +173,34 @@ const cancelOrderByUser = async (orderId, userId) => {
     VALUES (?, NOW(), 'Đã hủy', 'Người dùng huỷ đơn hàng')
   `, [orderId]);
 };
-
-// ⭐ Đánh giá sản phẩm (chỉ khi đã thanh toán và giao)
 const addReview = async (productId, userId, rating, comment) => {
-  // Kiểm tra trạng thái đơn và thanh toán
+  if (!rating || rating < 1 || rating > 5) {
+    throw new Error('Điểm số phải từ 1 đến 5');
+  }
+  if (!comment || comment.trim().length === 0) {
+    throw new Error('Nhận xét không được để trống');
+  }
+
+  // Kiểm tra user có đơn hàng đã giao với sản phẩm đó không
   const [rows] = await db.query(`
     SELECT dh.id_don_hang
     FROM don_hang dh
-    JOIN thanh_toan tt ON dh.id_don_hang = tt.id_don_hang
-    WHERE dh.id_nguoi_dung = ? AND dh.trang_thai = 'Đã giao'
-          AND tt.trang_thai = 'Đã thanh toán'
-  `, [userId]);
+    JOIN chi_tiet_don_hang ctdh ON dh.id_don_hang = ctdh.id_don_hang
+    WHERE dh.id_nguoi_dung = ? AND dh.trang_thai = 'Đã giao' AND ctdh.id_san_pham = ?
+  `, [userId, productId]);
 
   if (rows.length === 0) {
-    throw new Error('Chỉ có thể đánh giá sau khi đơn hàng đã giao và thanh toán thành công.');
+    throw new Error('Chỉ có thể đánh giá sản phẩm sau khi đơn hàng đã giao.');
   }
 
-  // Thêm đánh giá
   await db.query(`
-    INSERT INTO danh_gia_san_pham (id_san_pham, id_nguoi_dung, diem_so, nhan_xet, ngay_danh_gia)
-    VALUES (?, ?, ?, ?, NOW())
-  `, [productId, userId, rating, comment]);
+    INSERT INTO danh_gia_san_pham (
+      id_san_pham, id_nguoi_dung, diem_so, nhan_xet, ngay_danh_gia, deleted, trang_thai
+    ) VALUES (?, ?, ?, ?, NOW(), 0, 'active')
+  `, [productId, userId, rating, comment.trim()]);
 };
 
-// 💳 Đánh dấu thanh toán thành công
+
 const markOrderPaid = async (momoOrderId, amount, method) => {
   await db.query(`
     UPDATE don_hang
@@ -175,7 +215,6 @@ const markOrderPaid = async (momoOrderId, amount, method) => {
   `, [amount, method, momoOrderId]);
 };
 
-// 💥 Đánh dấu thanh toán thất bại
 const markOrderFailed = async (momoOrderId) => {
   await db.query(`
     UPDATE don_hang
@@ -184,7 +223,6 @@ const markOrderFailed = async (momoOrderId) => {
   `, [momoOrderId]);
 };
 
-// 📦 Lấy sản phẩm từ đơn hàng (phục vụ cho mua lại)
 const getProductsFromOrder = async (orderId, userId) => {
   const [rows] = await db.query(`
     SELECT ctdh.id_san_pham, ctdh.so_luong
@@ -192,18 +230,44 @@ const getProductsFromOrder = async (orderId, userId) => {
     JOIN don_hang dh ON dh.id_don_hang = ctdh.id_don_hang
     WHERE dh.id_don_hang = ? AND dh.id_nguoi_dung = ?
   `, [orderId, userId]);
-
   return rows;
 };
 
-// 📦 Export tất cả
+const getReviewsByProductId = async (productId) => {
+  const [reviews] = await db.query(`
+    SELECT dg.id_danh_gia, dg.id_nguoi_dung, nd.ten AS ten_nguoi_dung,
+           dg.diem_so, dg.nhan_xet, dg.ngay_danh_gia
+    FROM danh_gia_san_pham dg
+    JOIN nguoi_dung nd ON dg.id_nguoi_dung = nd.id_nguoi_dung
+    WHERE dg.id_san_pham = ? AND dg.deleted = 0 AND dg.trang_thai = 'active'
+    ORDER BY dg.ngay_danh_gia DESC
+  `, [productId]);
+  return reviews;
+};
+
+const deleteOrder = async (orderId) => {
+  try {
+    const [result] = await db.query(
+      `DELETE FROM don_hang WHERE id_don_hang = ?`,
+      [orderId]
+    );
+    return result.affectedRows > 0;
+  } catch (err) {
+    console.error('❌ Lỗi deleteOrder:', err);
+    throw new Error('Không thể xóa đơn hàng');
+  }
+};
+
 module.exports = {
   createOrder,
   getOrdersByUserId,
-  getOrderDetailByUser,
+  getOrderProductsByUser, // hàm mới lấy chi tiết sản phẩm đơn hàng
+  getOrderHistoriesByUser,
   cancelOrderByUser,
   addReview,
   markOrderPaid,
   markOrderFailed,
-  getProductsFromOrder
+  getProductsFromOrder,
+  getReviewsByProductId,
+  deleteOrder
 };
